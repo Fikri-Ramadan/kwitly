@@ -11,12 +11,12 @@ export class AppController {
 
   @Get()
   getHello() {
-    return { message: 'hello world' };
+    return this.appService.getHello();
   }
 
   @Get('profile')
   getProfile() {
-    return {message: 'This is endpoint profile'}
+    return { message: 'This is endpoint profile' };
   }
 
   @Get('health/db')
