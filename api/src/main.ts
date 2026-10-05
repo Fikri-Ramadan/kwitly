@@ -3,26 +3,19 @@ import { AppModule } from './app.module.js';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule
-    // {
-    //   instrument: ObserveInstrument,
-    // }
-  );
+  const app = await NestFactory.create(AppModule);
 
-  // Semua route diawali /api, contoh: POST /api/auth/login
   app.setGlobalPrefix('api');
 
-  // Validasi semua input di server (sesuai spec)
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // buang field yang tidak ada di DTO
-      forbidNonWhitelisted: true, // tolak field asing
-      transform: true, // ubah payload ke tipe DTO
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 
-  // CORS hanya berlaku untuk browser. Postman tidak terpengaruh.
-  const allowedOrigins = [process.env.WEB_URL, 'http://localhost:8000'].filter(
+  const allowedOrigins = [process.env.WEB_URL, 'http://localhost:3000'].filter(
     Boolean,
   ) as string[];
 
@@ -33,4 +26,7 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 8000);
 }
-await bootstrap();
+bootstrap().catch((err) => {
+  console.error('Failed to start the app', err);
+  process.exit(1);
+});
