@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
+import { User } from './common/decorator/user.decorator.js';
 
 @Controller()
 export class AppController {
@@ -15,8 +16,8 @@ export class AppController {
   }
 
   @Get('profile')
-  getProfile() {
-    return { message: 'This is endpoint profile' };
+  getProfile(@User() user: any) {
+    return { data: user };
   }
 
   @Get('health/db')
