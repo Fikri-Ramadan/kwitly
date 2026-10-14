@@ -1,0 +1,159 @@
+import { BadRequestException, HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
+import { UserService } from '../user/user.service.js';
+import bcrypt from 'bcryptjs';
+import { JwtService } from '@nestjs/jwt';
+import { MailService } from './mail.service.js';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { ConfigService } from '@nestjs/config';
+
+type OneTimeType = 'EMAIL_VERIFY' | 'MAGIC_LINK';
+type TokenType = OneTimeType | 'REFRESH';
+
+const BCRYPT_ROUNDS = 12;
+const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 Hours
+const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days
+export const ACCESS_TOKEN_TTL_S = 15 * 60; // 15 Minutes
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private config: ConfigService,
+    private userService: UserService,
+    private jwtService: JwtService,
+    private prisma: PrismaService,
+    private mailService: MailService
+  ) { }
+
+  async validateUser(email: string, pass: string) {
+    const user = await this.userService.findByEmail(email);
+    if (pass !== user.password) throw new HttpException('Incorrect password', HttpStatus.BAD_REQUEST);
+    const { password, ...result } = user;
+    return result;
+  }
+
+  async register(email: string, password: string) {
+    const newUser = await this.userService.create(
+      email,
+      await bcrypt.hash(password, BCRYPT_ROUNDS),
+    );
+    const token = await this.createToken(newUser.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
+    await this.mailService.sendVerification(email, this.webLink('/verify-email', token));
+  }
+
+  async verifyEmail(token: string) {
+    const userId = await this.consumeToken(token, 'EMAIL_VERIFY');
+    await this.userService.markEmailVerified(userId);
+  }
+
+  async login(email: string, password: string) {
+    const user = await this.userService.findByEmail(email);
+    const valid = user?.password ?
+      await bcrypt.compare(password, user.password) :
+      (await bcrypt.hash(password, BCRYPT_ROUNDS), false);
+    if (!valid) throw new BadRequestException('Invalid credentials.');
+    if (!user.emailVerified) throw new BadRequestException('Email not yet verified.');
+
+    return await this.issueSession(user);
+  }
+
+  async refresh(raw: string) {
+    const invalid = new UnauthorizedException('The session has ended. Please log in again.');
+
+    const record = await this.prisma.authToken.findUnique({
+      where: { tokenHash: this.sha256(raw) },
+      include: { user: true }
+    });
+
+    if (!record || record.type !== 'REFRESH' || record.expiresAt < new Date())
+      throw invalid;
+
+    if (record.usedAt) {
+      if (record.familyId) await this.revokeFamily(record.familyId);
+      throw invalid;
+    }
+
+    const { count } = await this.prisma.authToken.updateMany({
+      where: { id: record.id, usedAt: null },
+      data: { usedAt: new Date() }
+    });
+    if (count !== 1) throw invalid;
+
+    return await this.issueSession(record.user, record.familyId ?? undefined);
+  }
+
+  async logout(raw: string) {
+    const record = await this.prisma.authToken.findUnique({
+      where: { tokenHash: this.sha256(raw) }
+    });
+    if (record?.type === 'REFRESH' && record.familyId)
+      this.revokeFamily(record.familyId);
+  }
+
+  private async issueSession(
+    user: { id: string, email: string; },
+    familyId: string = randomUUID()
+  ) {
+    const accessToken = await this.jwtService.signAsync({
+      sub: user.id, email: user.email
+    });
+    const refreshToken = await this.createToken(user.id, 'REFRESH', REFRESH_TTL_MS, familyId);
+
+    return {
+      accessToken,
+      refreshToken,
+      tokenType: 'Bearer' as const,
+      expiresIn: ACCESS_TOKEN_TTL_S
+    };
+  }
+
+  private async createToken(userId: string, type: TokenType, ttlMs: number, familyId?: string) {
+    const raw = randomBytes(32).toString('base64url');
+    await this.prisma.authToken.create({
+      data: {
+        userId,
+        type,
+        familyId,
+        tokenHash: this.sha256(raw),
+        expiresAt: new Date(Date.now() + ttlMs)
+      }
+    });
+    return raw;
+  }
+
+  private async consumeToken(raw: string, type: OneTimeType) {
+    const invalid = new BadRequestException('The token is invalid or has expired.');
+
+    const record = await this.prisma.authToken.findUnique({
+      where: { tokenHash: this.sha256(raw) }
+    });
+
+    if (!record || record.type !== type ||
+      record.usedAt || record.expiresAt < new Date()
+    ) throw invalid;
+
+    const { count } = await this.prisma.authToken.updateMany({
+      where: { tokenHash: this.sha256(raw), usedAt: null },
+      data: { usedAt: new Date() }
+    });
+
+    if (count !== 1) throw invalid;
+    return record.userId;
+  }
+
+  private async revokeFamily(familyId: string) {
+    await this.prisma.authToken.updateMany({
+      where: { familyId, usedAt: null },
+      data: { usedAt: new Date() }
+    });
+  }
+
+  private sha256(value: string) {
+    return createHash('sha256').update(value).digest('hex');
+  }
+
+  private webLink(path: string, token: string) {
+    const base = this.config.getOrThrow<string>('WEB_URL');
+    return `${base}${path}?token=${encodeURIComponent(token)}`;
+  }
+}

@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  password      String?
+  emailVerified Boolean     @default(false)
+  authTokens    AuthToken[]
+  profile       Profile?
+  // clients       Client[]
+  // products      Product[]
+  // invoices      Invoice[]
+  createdAt     DateTime    @default(now())
+}
+
+model Profile {
+  id String @id @default(uuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id])
+  fullName String
+}
+
+enum AuthTokenType {
+  EMAIL_VERIFY
+  MAGIC_LINK
+  REFRESH
+}
+
+model AuthToken {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      AuthTokenType
+  tokenHash String        @unique
+  familyId  String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@index([userId, type])
+  @@index([familyId])
+}

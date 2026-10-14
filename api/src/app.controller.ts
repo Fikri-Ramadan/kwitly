@@ -1,12 +1,28 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service.js';
+import { PrismaService } from './prisma/prisma.service.js';
+import { User } from './common/decorator/user.decorator.js';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private prisma: PrismaService
+  ) { }
 
   @Get()
-  getHello(): string {
+  getHello() {
     return this.appService.getHello();
+  }
+
+  @Get('profile')
+  getProfile(@User() user: any) {
+    return { data: user };
+  }
+
+  @Get('health/db')
+  async db() {
+    await this.prisma.$queryRaw`SELECT 1`;
+    return { db: 'ok' };
   }
 }

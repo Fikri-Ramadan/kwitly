@@ -1,0 +1,40 @@
+import { Body, Controller, Post } from '@nestjs/common';
+import { AuthService } from './auth.service.js';
+import { LoginDto, RegisterDto, TokenDto } from './dto/auth.dto.js';
+import { Public } from '../common/decorator/public.decorator.js';
+
+@Public()
+@Controller('auth')
+export class AuthController {
+  constructor(
+    private authService: AuthService,
+  ) { }
+
+  @Post('register')
+  async register(@Body() registerDto: RegisterDto) {
+    await this.authService.register(registerDto.email, registerDto.password);
+    return { message: 'Registration successfully. Check email for verify account.' };
+  }
+
+  @Post('login')
+  async login(@Body() loginDto: LoginDto) {
+    return await this.authService.login(loginDto.email, loginDto.password);
+  }
+
+  @Post('logout')
+  async logout(@Body() { token }: TokenDto) {
+    await this.authService.logout(token);
+    return { message: 'Logout successfully.' };
+  }
+
+  @Post('refresh')
+  async refresh(@Body() { token }: TokenDto) {
+    return await this.authService.refresh(token);
+  }
+
+  @Post('verify-email')
+  async verifyEmail(@Body() { token }: TokenDto) {
+    await this.authService.verifyEmail(token);
+    return { message: 'Email successfully verified. Please log in.' };
+  }
+}
