@@ -47,7 +47,9 @@ export class AuthService {
   async verifyMagicLink(token: string) {
     const userId = await this.consumeToken(token, 'MAGIC_LINK');
     const user = await this.userService.findById(userId);
-    await this.userService.markEmailVerified(user.id);
+    if (!user.emailVerified) {
+      await this.userService.markEmailVerifiedAndResetPassword(user.id);
+    }
     return await this.issueSession(user);
   }
 

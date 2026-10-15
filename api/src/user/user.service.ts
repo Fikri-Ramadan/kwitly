@@ -55,6 +55,13 @@ export class UserService {
     });
   }
 
+  async markEmailVerifiedAndResetPassword(id: string) {
+    await this.prisma.user.update({
+      where: { id },
+      data: { emailVerified: true, password: null }
+    });
+  }
+
   async updatePassword(id: string, password: string) {
     const user = await this.findById(id);
     await this.prisma.user.update({
