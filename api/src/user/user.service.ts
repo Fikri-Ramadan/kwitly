@@ -23,7 +23,7 @@ export class UserService {
 
   async upsert(email: string) {
     return await this.prisma.user.upsert({
-      where: {email},
+      where: { email },
       update: {},
       create: {
         email,
@@ -33,7 +33,7 @@ export class UserService {
           }
         }
       }
-    })
+    });
   }
 
   async findByEmail(email: string) {
@@ -52,6 +52,14 @@ export class UserService {
     await this.prisma.user.update({
       where: { id },
       data: { emailVerified: true }
+    });
+  }
+
+  async updatePassword(id: string, password: string) {
+    const user = await this.findById(id);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password }
     });
   }
 }

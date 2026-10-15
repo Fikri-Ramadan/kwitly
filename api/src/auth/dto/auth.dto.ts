@@ -19,6 +19,17 @@ export class LoginDto {
   password: string;
 }
 
+export class ForgotPasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+
+  @IsString()
+  @MinLength(7)
+  @MaxLength(128)
+  password: string;
+}
+
 export class EmailDto {
   @IsEmail()
   email: string;

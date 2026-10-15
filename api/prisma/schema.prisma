@@ -31,6 +31,7 @@ enum AuthTokenType {
   EMAIL_VERIFY
   MAGIC_LINK
   REFRESH
+  FORGOT_PASS
 }
 
 model AuthToken {

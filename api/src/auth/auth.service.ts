@@ -7,13 +7,14 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ConfigService } from '@nestjs/config';
 
-type OneTimeType = 'EMAIL_VERIFY' | 'MAGIC_LINK';
+type OneTimeType = 'EMAIL_VERIFY' | 'MAGIC_LINK' | 'FORGOT_PASS';
 type TokenType = OneTimeType | 'REFRESH';
 
 const BCRYPT_ROUNDS = 12;
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 Hours
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000; // 15 Minutes
+const FORGOT_PASS_TTL_MS = 60 * 60 * 1000; // 60 Minutes
 export const ACCESS_TOKEN_TTL_S = 15 * 60; // 15 Minutes
 
 @Injectable()
@@ -106,6 +107,22 @@ export class AuthService {
     });
     if (record?.type === 'REFRESH' && record.familyId)
       this.revokeFamily(record.familyId);
+  }
+
+  async requestForgotPassword(email: string) {
+    const user = await this.userService.findByEmail(email);
+    await this.prisma.authToken.updateMany({
+      where: { userId: user.id, type: 'FORGOT_PASS', usedAt: null },
+      data: { usedAt: new Date() }
+    });
+    const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
+    await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', token));
+  }
+
+  async verifyForgotPassword(token: string, password: string) {
+    const userId = await this.consumeToken(token, 'FORGOT_PASS');
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    await this.userService.updatePassword(userId, hashedPassword);
   }
 
   private async issueSession(

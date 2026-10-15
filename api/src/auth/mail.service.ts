@@ -22,6 +22,14 @@ export class MailService {
     });
   }
 
+  async sendForgotLink(to: string, link: string) {
+    await this.send({
+      to,
+      subject: 'Tautan forgot password Kwitly',
+      html: `<p>Klik tautan berikut untuk memperbaruhi password (berlaku 60 menit, sekali pakai):</p><p><a href="${link}">Masuk ke Kwitly</a></p><p>Abaikan email ini jika Anda tidak memintanya.</p>`
+    })
+  }
+
   private async send(mail: Mail) {
     const fromEmail = process.env.MAIL_FROM_EMAIL;
     const fromName = process.env.MAIL_FROM_NAME;

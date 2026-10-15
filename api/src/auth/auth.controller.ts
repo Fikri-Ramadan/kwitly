@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
-import { EmailDto, LoginDto, RegisterDto, TokenDto } from './dto/auth.dto.js';
+import { EmailDto, ForgotPasswordDto, LoginDto, RegisterDto, TokenDto } from './dto/auth.dto.js';
 import { Public } from '../common/decorator/public.decorator.js';
 
 @Public()
@@ -33,6 +33,12 @@ export class AuthController {
     return { message: 'Logout successfully.' };
   }
 
+  @Post('forgot-password')
+  async requestForgotPassword(@Body() { email }: EmailDto) {
+    await this.authService.requestForgotPassword(email);
+    return { message: 'The link has been sent successfully. Please check your email.' };
+  }
+
   @Post('refresh')
   async refresh(@Body() { token }: TokenDto) {
     return await this.authService.refresh(token);
@@ -47,5 +53,11 @@ export class AuthController {
   @Post('verify-magic-link')
   async verifyMagicLink(@Body() { token }: TokenDto) {
     return await this.authService.verifyMagicLink(token);
+  }
+
+  @Post('verify-forgot-password')
+  async verifyForgotPassword(@Body() { token, password }: ForgotPasswordDto) {
+    await this.authService.verifyForgotPassword(token, password);
+    return { message: 'Password successfully changed. Please log in.' }
   }
 }
