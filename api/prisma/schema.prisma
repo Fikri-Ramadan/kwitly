@@ -21,10 +21,14 @@ model User {
 }
 
 model Profile {
-  id String @id @default(uuid())
-  userId String @unique
-  user User @relation(fields: [userId], references: [id])
+  id       String  @id @default(uuid())
+  userId   String  @unique
+  user     User    @relation(fields: [userId], references: [id])
   fullName String
+  company  String?
+  phone    String?
+  address  String?
+  logoUrl  String?
 }
 
 enum AuthTokenType {

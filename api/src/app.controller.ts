@@ -17,11 +17,6 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Get('profile')
-  getProfile(@User() user: any) {
-    return { data: user };
-  }
-
   @Get('health/db')
   async db() {
     await this.prisma.$queryRaw`SELECT 1`;
