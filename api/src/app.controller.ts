@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
 import { User } from './common/decorator/user.decorator.js';
+import { Public } from './common/decorator/public.decorator.js';
 
 @Controller()
 export class AppController {
@@ -10,6 +11,7 @@ export class AppController {
     private prisma: PrismaService
   ) { }
 
+  @Public()
   @Get()
   getHello() {
     return this.appService.getHello();
