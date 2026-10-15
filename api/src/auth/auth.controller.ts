@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
-import { LoginDto, RegisterDto, TokenDto } from './dto/auth.dto.js';
+import { EmailDto, LoginDto, RegisterDto, TokenDto } from './dto/auth.dto.js';
 import { Public } from '../common/decorator/public.decorator.js';
 
 @Public()
@@ -14,6 +14,12 @@ export class AuthController {
   async register(@Body() registerDto: RegisterDto) {
     await this.authService.register(registerDto.email, registerDto.password);
     return { message: 'Registration successfully. Check email for verify account.' };
+  }
+
+  @Post('magic-link')
+  async requestMagicLink(@Body() { email }: EmailDto) {
+    await this.authService.requestMagicLink(email);
+    return { message: 'The link has been sent successfully. Please check your email.' };
   }
 
   @Post('login')
@@ -36,5 +42,10 @@ export class AuthController {
   async verifyEmail(@Body() { token }: TokenDto) {
     await this.authService.verifyEmail(token);
     return { message: 'Email successfully verified. Please log in.' };
+  }
+
+  @Post('verify-magic-link')
+  async verifyMagicLink(@Body() { token }: TokenDto) {
+    return await this.authService.verifyMagicLink(token);
   }
 }

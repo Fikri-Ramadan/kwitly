@@ -13,6 +13,7 @@ type TokenType = OneTimeType | 'REFRESH';
 const BCRYPT_ROUNDS = 12;
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 Hours
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days
+const MAGIC_LINK_TTL_MS = 15 * 60 * 1000; // 15 Minutes
 export const ACCESS_TOKEN_TTL_S = 15 * 60; // 15 Minutes
 
 @Injectable()
@@ -32,13 +33,30 @@ export class AuthService {
     return result;
   }
 
+  async requestMagicLink(email: string) {
+    const record = await this.userService.upsert(email);
+    await this.prisma.authToken.updateMany({
+      where: { userId: record.id, type: 'MAGIC_LINK', usedAt: null },
+      data: { usedAt: new Date() }
+    });
+    const token = await this.createToken(record.id, 'MAGIC_LINK', MAGIC_LINK_TTL_MS);
+    await this.mailService.sendMagicLink(record.email, this.webLink('/verify-magic-link', token));
+  }
+
+  async verifyMagicLink(token: string) {
+    const userId = await this.consumeToken(token, 'MAGIC_LINK');
+    const user = await this.userService.findById(userId);
+    await this.userService.markEmailVerified(user.id);
+    return await this.issueSession(user);
+  }
+
   async register(email: string, password: string) {
-    const newUser = await this.userService.create(
+    const record = await this.userService.create(
       email,
       await bcrypt.hash(password, BCRYPT_ROUNDS),
     );
-    const token = await this.createToken(newUser.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
-    await this.mailService.sendVerification(email, this.webLink('/verify-email', token));
+    const token = await this.createToken(record.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
+    await this.mailService.sendVerification(record.email, this.webLink('/verify-email', token));
   }
 
   async verifyEmail(token: string) {

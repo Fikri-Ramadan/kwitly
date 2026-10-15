@@ -19,6 +19,11 @@ export class LoginDto {
   password: string;
 }
 
+export class EmailDto {
+  @IsEmail()
+  email: string;
+}
+
 export class TokenDto {
   @IsString()
   @IsNotEmpty()

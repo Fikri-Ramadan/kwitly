@@ -7,10 +7,18 @@ export class MailService {
   private logger = new Logger(MailService.name);
 
   async sendVerification(to: string, link: string) {
-    this.send({
+    await this.send({
       to,
       subject: 'verify email Kwitly',
       html: `<p>Klik tautan berikut untuk memverifikasi akun Anda (berlaku 24 jam):</p><p><a href="${link}">Verifikasi email</a></p>`,
+    });
+  }
+
+  async sendMagicLink(to: string, link: string) {
+    await this.send({
+      to,
+      subject: 'Tautan login Kwitly',
+      html: `<p>Klik tautan berikut untuk masuk (berlaku 15 menit, sekali pakai):</p><p><a href="${link}">Masuk ke Kwitly</a></p><p>Abaikan email ini jika Anda tidak memintanya.</p>`
     });
   }
 
