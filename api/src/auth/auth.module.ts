@@ -4,6 +4,7 @@ import { AuthController } from './auth.controller.js';
 import { UserModule } from '../user/user.module.js';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { RateLimitModule } from '../rate-limit/rate-limit.module.js';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
         signOptions: { expiresIn: ACCESS_TOKEN_TTL_S },
       })
     }),
+    RateLimitModule,
     UserModule
   ],
   controllers: [AuthController],

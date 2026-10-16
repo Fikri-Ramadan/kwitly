@@ -52,3 +52,11 @@ model AuthToken {
   @@index([userId, type])
   @@index([familyId])
 }
+
+model RateLimit {
+  key       String   @id
+  hits      Int
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
+}

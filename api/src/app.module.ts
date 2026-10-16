@@ -10,6 +10,7 @@ import { MailModule } from './auth/mail.module.js';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth/auth.guard.js';
 import { ProfileModule } from './profile/profile.module.js';
+import { RateLimitModule } from './rate-limit/rate-limit.module.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ProfileModule } from './profile/profile.module.js';
     AuthModule,
     UserModule,
     ProfileModule,
+    RateLimitModule,
   ],
   controllers: [AppController],
   providers: [
