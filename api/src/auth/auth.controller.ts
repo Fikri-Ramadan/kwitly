@@ -34,9 +34,15 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  async requestForgotPassword(@Body() { email }: EmailDto) {
-    await this.authService.requestForgotPassword(email);
+  async requestResetPassword(@Body() { email }: EmailDto) {
+    await this.authService.requestResetPassword(email);
     return { message: 'The link has been sent successfully. Please check your email.' };
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() { token, password }: ForgotPasswordDto) {
+    await this.authService.resetPassword(token, password);
+    return { message: 'Password successfully changed. Please log in.' }
   }
 
   @Post('refresh')
@@ -53,11 +59,5 @@ export class AuthController {
   @Post('verify-magic-link')
   async verifyMagicLink(@Body() { token }: TokenDto) {
     return await this.authService.verifyMagicLink(token);
-  }
-
-  @Post('verify-forgot-password')
-  async verifyForgotPassword(@Body() { token, password }: ForgotPasswordDto) {
-    await this.authService.verifyForgotPassword(token, password);
-    return { message: 'Password successfully changed. Please log in.' }
   }
 }

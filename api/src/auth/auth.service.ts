@@ -35,13 +35,10 @@ export class AuthService {
   }
 
   async requestMagicLink(email: string) {
-    const record = await this.userService.upsert(email);
-    await this.prisma.authToken.updateMany({
-      where: { userId: record.id, type: 'MAGIC_LINK', usedAt: null },
-      data: { usedAt: new Date() }
-    });
-    const token = await this.createToken(record.id, 'MAGIC_LINK', MAGIC_LINK_TTL_MS);
-    await this.mailService.sendMagicLink(record.email, this.webLink('/verify-magic-link', token));
+    const user = await this.userService.upsert(email);
+    await this.invalidateTokens(user.id, 'MAGIC_LINK');
+    const token = await this.createToken(user.id, 'MAGIC_LINK', MAGIC_LINK_TTL_MS);
+    await this.mailService.sendMagicLink(user.email, this.webLink('/verify-magic-link', token));
   }
 
   async verifyMagicLink(token: string) {
@@ -111,19 +108,29 @@ export class AuthService {
       this.revokeFamily(record.familyId);
   }
 
-  async requestForgotPassword(email: string) {
+  async requestResetPassword(email: string) {
     const user = await this.userService.findByEmail(email);
-    await this.prisma.authToken.updateMany({
-      where: { userId: user.id, type: 'FORGOT_PASS', usedAt: null },
-      data: { usedAt: new Date() }
-    });
+    await this.invalidateTokens(user.id, 'FORGOT_PASS')
     const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
     await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', token));
   }
 
-  async verifyForgotPassword(token: string, password: string) {
+  async resetPassword(token: string, password: string) {
     const userId = await this.consumeToken(token, 'FORGOT_PASS');
     const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword, emailVerified: true }
+      }),
+      this.prisma.authToken.updateMany({
+        where: {
+          userId, usedAt: null,
+          type: { in: ['FORGOT_PASS', 'REFRESH', 'MAGIC_LINK'] }
+        },
+        data: { usedAt: new Date() }
+      })
+    ]);
     await this.userService.updatePassword(userId, hashedPassword);
   }
 
@@ -176,6 +183,13 @@ export class AuthService {
 
     if (count !== 1) throw invalid;
     return record.userId;
+  }
+
+  private async invalidateTokens(userId: string, type: TokenType) {
+    await this.prisma.authToken.updateMany({
+      where: { userId, type, usedAt: null },
+      data: { usedAt: new Date() }
+    });
   }
 
   private async revokeFamily(familyId: string) {
