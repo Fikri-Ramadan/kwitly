@@ -14,7 +14,7 @@ model User {
   emailVerified Boolean     @default(false)
   authTokens    AuthToken[]
   profile       Profile?
-  // clients       Client[]
+  clients       Client[]
   // products      Product[]
   // invoices      Invoice[]
   createdAt     DateTime    @default(now())
@@ -29,6 +29,21 @@ model Profile {
   phone    String?
   address  String?
   logoUrl  String?
+}
+
+model Client {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  name            String
+  email           String
+  phone           String?
+  address         String?
+  paymentTermDays Int       @default(14)
+  paymentMethod   String?
+  deletedAt       DateTime?
+
+  @@unique([userId, email])
 }
 
 enum AuthTokenType {

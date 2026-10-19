@@ -11,6 +11,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth/auth.guard.js';
 import { ProfileModule } from './profile/profile.module.js';
 import { RateLimitModule } from './rate-limit/rate-limit.module.js';
+import { ClientModule } from './client/client.module.js';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { RateLimitModule } from './rate-limit/rate-limit.module.js';
     UserModule,
     ProfileModule,
     RateLimitModule,
+    ClientModule,
   ],
   controllers: [AppController],
   providers: [
