@@ -1,8 +1,7 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
 import { User } from '../common/decorator/user.decorator.js';
 import { ClientService } from './client.service.js';
 import { CreateDto, UpdateDto } from './dto/client.dto.js';
-import { Public } from '../common/decorator/public.decorator.js';
 
 @Controller('client')
 export class ClientController {
@@ -12,6 +11,14 @@ export class ClientController {
   @Get()
   async getMyClients(@User() user: { sub: string; }) {
     return await this.clientService.findClientByUserId(user.sub);
+  }
+
+  @Get(':id')
+  async getClientById(
+    @Param('id', ParseUUIDPipe) id: string,
+    @User() user: { sub: string; }
+  ) {
+    return await this.clientService.findClientById(id, user.sub);
   }
 
   @Post()
@@ -50,5 +57,14 @@ export class ClientController {
         paymentMethod: updateDto.paymentMethod
       }
     );
+  }
+
+  @Delete(':id')
+  async deleteClient(
+    @Param('id', ParseUUIDPipe) id: string,
+    @User() user: { sub: string; }
+  ) {
+    await this.clientService.delete(id, user.sub);
+    return {message: 'Client successfully deleted.'}
   }
 }
