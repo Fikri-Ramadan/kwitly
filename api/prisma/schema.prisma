@@ -15,7 +15,7 @@ model User {
   authTokens    AuthToken[]
   profile       Profile?
   clients       Client[]
-  // products      Product[]
+  products      Product[]
   // invoices      Invoice[]
   createdAt     DateTime    @default(now())
 }
@@ -44,6 +44,26 @@ model Client {
   deletedAt       DateTime?
 
   @@unique([userId, email])
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  userId    String
+  name      String
+  deletedAt DateTime?
+  products  Product[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(14, 2)
+  deletedAt   DateTime
 }
 
 enum AuthTokenType {

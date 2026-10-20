@@ -10,14 +10,14 @@ export class ClientService {
   ) { }
 
   async findClientByUserId(userId: string) {
-    return this.prisma.client.findMany({
+    return await this.prisma.client.findMany({
       where: { userId, deletedAt: null },
       orderBy: { name: 'asc' }
     });
   }
 
   async findClientById(clientId: string, userId: string) {
-    return this.isMyClient(clientId, userId);
+    return await this.isMyClient(clientId, userId);
   }
 
   async create(userId: string, data: CreateDto) {
@@ -29,7 +29,7 @@ export class ClientService {
       if (!existingClient.deletedAt)
         throw new ConflictException('This email already assigned to another active client.');
 
-      return this.prisma.client.update({
+      return await this.prisma.client.update({
         where: { id: existingClient.id },
         data: {
           ...data,
@@ -38,7 +38,7 @@ export class ClientService {
       });
     }
 
-    return this.prisma.client.create({
+    return await this.prisma.client.create({
       data: {
         ...data,
         userId,
@@ -66,7 +66,7 @@ export class ClientService {
       }
     }
 
-    return this.prisma.client.update({
+    return await this.prisma.client.update({
       where: { id: clientId },
       data: { ...data },
     });
@@ -74,14 +74,14 @@ export class ClientService {
 
   async delete(clientId: string, userId: string) {
     await this.isMyClient(clientId, userId);
-    return this.prisma.client.update({
+    return await this.prisma.client.update({
       where: { id: clientId, userId },
       data: { deletedAt: new Date() }
     });
   }
 
   async isMyClient(clientId: string, userId: string) {
-    const client = await this.prisma.client.findFirst({
+    const client = await this.prisma.client.findUnique({
       where: { id: clientId, deletedAt: null }
     });
     if (!client || client.deletedAt) throw new NotFoundException('Client not found.');

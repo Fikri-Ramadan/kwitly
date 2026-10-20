@@ -12,6 +12,7 @@ import { AuthGuard } from './auth/auth.guard.js';
 import { ProfileModule } from './profile/profile.module.js';
 import { RateLimitModule } from './rate-limit/rate-limit.module.js';
 import { ClientModule } from './client/client.module.js';
+import { CategoryModule } from './category/category.module.js';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ClientModule } from './client/client.module.js';
     ProfileModule,
     RateLimitModule,
     ClientModule,
+    CategoryModule,
   ],
   controllers: [AppController],
   providers: [
