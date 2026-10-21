@@ -13,6 +13,7 @@ import { ProfileModule } from './profile/profile.module.js';
 import { RateLimitModule } from './rate-limit/rate-limit.module.js';
 import { ClientModule } from './client/client.module.js';
 import { CategoryModule } from './category/category.module.js';
+import { ProductModule } from './product/product.module.js';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CategoryModule } from './category/category.module.js';
     RateLimitModule,
     ClientModule,
     CategoryModule,
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [
