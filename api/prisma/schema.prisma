@@ -49,21 +49,24 @@ model Client {
 model Category {
   id        String    @id @default(uuid())
   userId    String
+  slug      String
   name      String
   deletedAt DateTime?
   products  Product[]
+
+  @@unique([userId, slug])
 }
 
 model Product {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
   categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
+  category    Category  @relation(fields: [categoryId], references: [id])
   name        String
   description String?
-  price       Decimal  @db.Decimal(14, 2)
-  deletedAt   DateTime
+  price       Decimal   @db.Decimal(14, 2)
+  deletedAt   DateTime?
 }
 
 enum AuthTokenType {

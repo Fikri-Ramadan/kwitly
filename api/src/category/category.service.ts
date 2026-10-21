@@ -1,6 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateDto, UpdateDto } from './dto/category.dto.js';
+import { nanoid } from 'nanoid';
+import slugify from 'slugify';
 
 @Injectable()
 export class CategoryService {
@@ -16,8 +18,14 @@ export class CategoryService {
   }
 
   async create(userId: string, data: CreateDto) {
+    const baseSlug = slugify(data.name, { lower: true, strict: true });
+
     return await this.prisma.category.create({
-      data: { userId, ...data }
+      data: {
+        ...data,
+        userId,
+        slug: `${baseSlug}-${nanoid(4)}`
+      }
     });
   }
 
