@@ -62,4 +62,15 @@ export class ProductService {
     if (product.userId !== userId) throw new ForbiddenException(`You don't have permission to access this product.`);
     return product;
   }
+
+  async validateUserProducts(ids: string[], userId: string) {
+    const count = await this.prisma.product.count({
+      where: {
+        id: { in: ids },
+        userId,
+        deletedAt: null
+      }
+    });
+    return count === [...new Set(ids)].length;
+  }
 }

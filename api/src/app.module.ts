@@ -14,6 +14,7 @@ import { RateLimitModule } from './rate-limit/rate-limit.module.js';
 import { ClientModule } from './client/client.module.js';
 import { CategoryModule } from './category/category.module.js';
 import { ProductModule } from './product/product.module.js';
+import { InvoiceModule } from './invoice/invoice.module.js';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ProductModule } from './product/product.module.js';
     ClientModule,
     CategoryModule,
     ProductModule,
+    InvoiceModule,
   ],
   controllers: [AppController],
   providers: [

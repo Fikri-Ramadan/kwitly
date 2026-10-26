@@ -16,19 +16,20 @@ model User {
   profile       Profile?
   clients       Client[]
   products      Product[]
-  // invoices      Invoice[]
+  invoices      Invoice[]
   createdAt     DateTime    @default(now())
 }
 
 model Profile {
-  id       String  @id @default(uuid())
-  userId   String  @unique
-  user     User    @relation(fields: [userId], references: [id])
-  fullName String
-  company  String?
-  phone    String?
-  address  String?
-  logoUrl  String?
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  fullName  String
+  company   String?
+  phone     String?
+  address   String?
+  logoUrl   String?
+  createdAt DateTime @default(now())
 }
 
 model Client {
@@ -42,6 +43,8 @@ model Client {
   paymentTermDays Int       @default(14)
   paymentMethod   String?
   deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  invoices        Invoice[]
 
   @@unique([userId, email])
 }
@@ -53,6 +56,7 @@ model Category {
   name      String
   deletedAt DateTime?
   products  Product[]
+  createdAt DateTime  @default(now())
 
   @@unique([userId, slug])
 }
@@ -67,6 +71,7 @@ model Product {
   description String?
   price       Decimal   @db.Decimal(14, 2)
   deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
 }
 
 enum AuthTokenType {
@@ -95,6 +100,50 @@ model RateLimit {
   key       String   @id
   hits      Int
   expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now())
 
   @@index([expiresAt])
 }
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+}
+
+model Invoice {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  clientId     String
+  client       Client        @relation(fields: [clientId], references: [id])
+  number       String //INV-2026-0001
+  issueDate    DateTime
+  dueDate      DateTime
+  status       InvoiceStatus @default(PENDING)
+  paymentTerms String?
+  notes        String?
+  subtotal     Decimal       @db.Decimal(14, 2)
+  tax          Decimal       @default(0) @db.Decimal(14, 2)
+  total        Decimal       @db.Decimal(14, 2)
+  paidAt       DateTime?
+  items        InvoiceItem[]
+  // recurring...
+  createdAt    DateTime      @default(now())
+
+  @@unique([userId, number])
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId   String?
+  description String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(14, 2)
+  createdAt   DateTime @default(now())
+}
+
+// recurring...

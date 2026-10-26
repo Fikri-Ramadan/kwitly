@@ -6,6 +6,7 @@ import { CategoryModule } from '../category/category.module.js';
 @Module({
   imports: [CategoryModule],
   providers: [ProductService],
-  controllers: [ProductController]
+  controllers: [ProductController],
+  exports: [ProductService]
 })
 export class ProductModule { }
