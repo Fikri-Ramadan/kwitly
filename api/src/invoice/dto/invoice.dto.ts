@@ -1,6 +1,7 @@
 import { ArrayNotEmpty, IsArray, IsDate, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
 import { Type } from 'class-transformer';
 import { InvoiceStatus } from "../../generated/prisma/enums.js";
+import { PartialType } from "@nestjs/mapped-types";
 
 export class CreateDto {
   @IsUUID()
@@ -30,11 +31,6 @@ export class CreateDto {
   @IsNumber()
   taxPercent?: number;
 
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  paidAt?: Date;
-
   @IsArray()
   @ArrayNotEmpty()
   @ValidateNested({ each: true })
@@ -55,3 +51,5 @@ export class ItemDto {
   @IsNumber()
   unitPrice: number;
 }
+
+export class UpdateDto extends PartialType(CreateDto) { }

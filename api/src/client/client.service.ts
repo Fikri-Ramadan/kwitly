@@ -29,12 +29,16 @@ export class ClientService {
       if (!existingClient.deletedAt)
         throw new ConflictException('This email already assigned to another active client.');
 
-      return await this.prisma.client.update({
+      return this.prisma.client.update({
         where: { id: existingClient.id },
         data: {
-          ...data,
+          name: data.name,
+          phone: data.phone ?? null,
+          address: data.address ?? null,
+          paymentMethod: data.paymentMethod ?? null,
+          paymentTermDays: data.paymentTermDays,
           deletedAt: null,
-        }
+        },
       });
     }
 

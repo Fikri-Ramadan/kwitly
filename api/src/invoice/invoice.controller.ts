@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
 import { Public } from '../common/decorator/public.decorator.js';
 import { InvoiceService } from './invoice.service.js';
 import { User } from '../common/decorator/user.decorator.js';
-import { CreateDto } from './dto/invoice.dto.js';
+import { CreateDto, UpdateDto } from './dto/invoice.dto.js';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -15,12 +15,12 @@ export class InvoiceController {
     return await this.invoiceService.findMyInvoices(user.sub);
   }
 
-  @Get(':id')
+  @Get(':invNumber')
   async getInvoiceByNumber(
-    @Param('id') id: string,
+    @Param('invNumber') invNumber: string,
     @User() user: { sub: string; }
   ) {
-    return await this.invoiceService.findInvoiceByNumber(user.sub, id);
+    return await this.invoiceService.findInvoiceByNumber(user.sub, invNumber);
   }
 
   @Post()
@@ -29,5 +29,14 @@ export class InvoiceController {
     @Body() createDto: CreateDto
   ) {
     return await this.invoiceService.create(user.sub, { ...createDto });
+  }
+
+  @Put(':invNumber')
+  async updateInvoice(
+    @Param('invNumber') invNumber: string,
+    @User() user: { sub: string; },
+    @Body() updateDto: UpdateDto
+  ) {
+    return await this.invoiceService.update(invNumber, user.sub, updateDto);
   }
 }

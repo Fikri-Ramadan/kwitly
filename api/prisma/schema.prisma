@@ -8,16 +8,18 @@ datasource db {
 }
 
 model User {
-  id            String      @id @default(uuid())
-  email         String      @unique
-  password      String?
-  emailVerified Boolean     @default(false)
-  authTokens    AuthToken[]
-  profile       Profile?
-  clients       Client[]
-  products      Product[]
-  invoices      Invoice[]
-  createdAt     DateTime    @default(now())
+  id              String           @id @default(uuid())
+  email           String           @unique
+  password        String?
+  emailVerified   Boolean          @default(false)
+  authTokens      AuthToken[]
+  profile         Profile?
+  clients         Client[]
+  categories      Category[]
+  products        Product[]
+  invoices        Invoice[]
+  invoiceCounters InvoiceCounter[]
+  createdAt       DateTime         @default(now())
 }
 
 model Profile {
@@ -52,6 +54,7 @@ model Client {
 model Category {
   id        String    @id @default(uuid())
   userId    String
+  user      User      @relation(fields: [userId], references: [id])
   slug      String
   name      String
   deletedAt DateTime?
@@ -110,6 +113,7 @@ enum InvoiceStatus {
   PENDING
   PAID
   OVERDUE
+  CANCELLED
 }
 
 model Invoice {
@@ -121,10 +125,11 @@ model Invoice {
   number       String //INV-2026-0001
   issueDate    DateTime
   dueDate      DateTime
-  status       InvoiceStatus @default(PENDING)
+  status       InvoiceStatus @default(DRAFT)
   paymentTerms String?
   notes        String?
   subtotal     Decimal       @db.Decimal(14, 2)
+  taxPercent   Decimal       @default(0) @db.Decimal(5, 2)
   tax          Decimal       @default(0) @db.Decimal(14, 2)
   total        Decimal       @db.Decimal(14, 2)
   paidAt       DateTime?
@@ -133,6 +138,9 @@ model Invoice {
   createdAt    DateTime      @default(now())
 
   @@unique([userId, number])
+  @@index([userId, status])
+  @@index([userId, dueDate])
+  @@index([clientId])
 }
 
 model InvoiceItem {
@@ -144,6 +152,15 @@ model InvoiceItem {
   quantity    Int
   unitPrice   Decimal  @db.Decimal(14, 2)
   createdAt   DateTime @default(now())
+}
+
+model InvoiceCounter {
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year   Int
+  last   Int    @default(0)
+
+  @@id([userId, year])
 }
 
 // recurring...

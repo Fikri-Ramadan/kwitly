@@ -15,7 +15,7 @@ const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 Hours
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000; // 15 Minutes
 const FORGOT_PASS_TTL_MS = 60 * 60 * 1000; // 60 Minutes
-export const ACCESS_TOKEN_TTL_S = 15 * 60; // 15 Minutes
+export const ACCESS_TOKEN_TTL_S = 300 * 60; // 15 Minutes
 
 @Injectable()
 export class AuthService {

@@ -1,13 +1,16 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { CreateDto } from './dto/invoice.dto.js';
+import { CreateDto, UpdateDto } from './dto/invoice.dto.js';
 import { ProductService } from '../product/product.service.js';
+import { ClientService } from '../client/client.service.js';
+import { Prisma } from '../generated/prisma/client.js';
 
 @Injectable()
 export class InvoiceService {
   constructor(
     private prisma: PrismaService,
-    private productService: ProductService
+    private productService: ProductService,
+    private clientService: ClientService
   ) { }
 
   async findInvoiceByNumber(userId: string, invoiceNumber: string) {
@@ -21,32 +24,39 @@ export class InvoiceService {
   }
 
   async create(userId: string, data: CreateDto) {
-    const { items, taxPercent = 0, ...invoiceData } = data;
+    const {
+      items, taxPercent = 0, clientId, issueDate, dueDate, status, notes, paymentTerms
+    } = data;
+
+    this.validateDate(issueDate, dueDate);
 
     return await this.prisma.$transaction(async (tx) => {
+      await this.clientService.isMyClient(clientId, userId);
       const productIds = [...new Set(items.map(item => item.productId))];
       const isValid = await this.productService.validateUserProducts(productIds, userId);
       if (!isValid) throw new ForbiddenException('One or more products are invalid or do not belong to you.');
 
-      let subtotal = 0;
-      const itemsToCreate = items.map(item => {
-        subtotal += item.unitPrice * item.quantity;
-        return {
-          productId: item.productId,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-        };
-      });
+      const number = await this.generateNumber(tx, userId);
+      const { subtotal, tax, total } = this.calculateTotals(items, taxPercent);
+      const itemsToCreate = items.map(item => ({
+        productId: item.productId,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      }));
 
-      const taxAmount = (subtotal * taxPercent) / 100;
-      const total = subtotal + taxAmount;
       const invoice = await tx.invoice.create({
         data: {
-          ...invoiceData,
           userId,
-          number: await this.generateNumber(),
-          tax: taxAmount,
+          clientId,
+          number,
+          issueDate,
+          dueDate,
+          status: status === 'PENDING' ? 'PENDING' : 'DRAFT',
+          notes,
+          paymentTerms,
+          taxPercent,
+          tax,
           subtotal,
           total,
           items: {
@@ -59,6 +69,73 @@ export class InvoiceService {
     });
   }
 
+  async update(invoiceNumber: string, userId: string, data: UpdateDto) {
+    const invoice = await this.isMyInvoice(invoiceNumber, userId);
+    if (invoice.status !== 'DRAFT') throw new BadRequestException('Unable to update invoice because status is not DRAFT.');
+
+    const { items, ...invoiceData } = data;
+    this.validateDate(invoiceData.issueDate ?? invoice.issueDate, invoiceData.dueDate ?? invoice.dueDate);
+    if (items === undefined || items?.length === 0) {
+      throw new BadRequestException('Invoice must have at least one item.');
+    }
+
+    if (invoiceData.clientId) {
+      await this.clientService.isMyClient(invoiceData.clientId, userId);
+    }
+
+    if (items) {
+      const productIds = [...new Set(data.items?.map(item => item.productId))];
+      const isValid = await this.productService.validateUserProducts(productIds, userId);
+      if (!isValid) throw new ForbiddenException('One or more products are invalid or do not belong to you.');
+    }
+
+    const recalc = items !== undefined || invoiceData.taxPercent !== undefined;
+    const totals = recalc ? this.calculateTotals(items ?? invoice.items, invoiceData.taxPercent ?? invoice.taxPercent)
+      : undefined;
+
+    const itemsToCreate = items.map(item => ({
+      productId: item.productId,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    }));
+
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.invoice.updateMany({
+        where: { id: invoice.id, status: 'DRAFT' },
+        data: {
+          clientId: invoiceData.clientId,
+          issueDate: invoiceData.issueDate,
+          dueDate: invoiceData.dueDate,
+          paymentTerms: invoiceData.paymentTerms,
+          notes: invoiceData.notes,
+          taxPercent: invoiceData.taxPercent,
+          ...(totals && { subtotal: totals.subtotal, tax: totals.tax, total: totals.total })
+        }
+      });
+
+      if (count !== 1) throw new ConflictException('Invoice is no longer a DRAFT. Reload and try again.');
+
+      if (data.items) {
+        await tx.invoiceItem.deleteMany({ where: { invoiceId: invoice.id } });
+        await tx.invoiceItem.createMany({
+          data: data.items.map((it) => ({
+            invoiceId: invoice.id,
+            productId: it.productId,
+            description: it.description,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+          })),
+        });
+      }
+
+      return await tx.invoice.findUniqueOrThrow({
+        where: { id: invoice.id },
+        include: { items: true }
+      });
+    });
+  }
+
   private async isMyInvoice(invoiceNumber: string, userId: string) {
     const invoice = await this.prisma.invoice.findUnique({
       where: {
@@ -68,25 +145,42 @@ export class InvoiceService {
         }
       },
       include: {
-        items: true
+        items: true,
       }
     });
     if (!invoice) throw new NotFoundException('Invoice not found.');
-    if (invoice.userId !== userId) throw new ForbiddenException(`You don't have permission to access this invoice.`);
     return invoice;
   }
 
-  private async generateNumber() {
-    const thisYear = new Date().getFullYear();
-    const count = await this.prisma.invoice.count({
-      where: {
-        createdAt: {
-          gte: new Date(`${thisYear}-01-01T00:00:00.000Z`),
-          lt: new Date(`${thisYear + 1}-01-01T00:00:00.000Z`)
-        }
-      },
+  private validateDate(issueDate: Date, dueDate: Date) {
+    if (new Date(dueDate) < new Date(issueDate))
+      throw new BadRequestException('Due date cannot be before issue date.');
+  }
+
+  private calculateTotals(
+    lines: { unitPrice: number, quantity: Prisma.Decimal | number | string; }[],
+    taxPercent: Prisma.Decimal | number | string
+  ) {
+    const subtotal = lines.reduce(
+      (acc, curr) => acc.plus(new Prisma.Decimal(curr.unitPrice).mul(curr.quantity)),
+      new Prisma.Decimal(0)
+    );
+    const tax = subtotal.mul(taxPercent).div(100).toDecimalPlaces(2);
+    return {
+      subtotal,
+      tax,
+      total: subtotal.plus(tax),
+    };
+  }
+
+  private async generateNumber(tx: Prisma.TransactionClient, userId: string) {
+    const year = new Date().getFullYear();
+    const count = await tx.invoiceCounter.upsert({
+      where: { userId_year: { userId, year } },
+      create: { userId, year, last: 1 },
+      update: { last: { increment: 1 } }
     });
-    const sequentialNumber = String(count + 1).padStart(4, '0');
-    return `INV-${thisYear}-${sequentialNumber}`;
+    const sequentialNumber = String(count.last).padStart(4, '0');
+    return `INV-${year}-${sequentialNumber}`;
   }
 }
