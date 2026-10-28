@@ -7,7 +7,8 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ConfigService } from '@nestjs/config';
 
-type OneTimeType = 'EMAIL_VERIFY' | 'MAGIC_LINK' | 'FORGOT_PASS';
+export const OneTimeTokenValues = ['EMAIL_VERIFY', 'MAGIC_LINK', 'FORGOT_PASS'] as const;
+export type OneTimeType = (typeof OneTimeTokenValues)[number];
 type TokenType = OneTimeType | 'REFRESH';
 
 const BCRYPT_ROUNDS = 12;
@@ -57,6 +58,30 @@ export class AuthService {
     );
     const token = await this.createToken(record.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
     await this.mailService.sendVerification(record.email, this.webLink('/verify-email', token));
+  }
+
+  async resendMail(type: OneTimeType, email: string) {
+    const user = await this.userService.findByEmail(email);
+    switch (type) {
+      case 'EMAIL_VERIFY': {
+        await this.invalidateTokens(user.id, 'EMAIL_VERIFY');
+        const token = await this.createToken(user.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
+        await this.mailService.sendVerification(email, this.webLink('/verify-email', token));
+        break;
+      }
+      case 'MAGIC_LINK': {
+        await this.invalidateTokens(user.id, 'MAGIC_LINK');
+        const token = await this.createToken(user.id, 'MAGIC_LINK', MAGIC_LINK_TTL_MS);
+        await this.mailService.sendMagicLink(user.email, this.webLink('/verify-magic-link', token));
+        break;
+      }
+      case 'FORGOT_PASS': {
+        await this.invalidateTokens(user.id, 'FORGOT_PASS');
+        const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
+        await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', token));
+        break;
+      }
+    }
   }
 
   async verifyEmail(token: string) {
@@ -110,7 +135,7 @@ export class AuthService {
 
   async requestResetPassword(email: string) {
     const user = await this.userService.findByEmail(email);
-    await this.invalidateTokens(user.id, 'FORGOT_PASS')
+    await this.invalidateTokens(user.id, 'FORGOT_PASS');
     const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
     await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', token));
   }

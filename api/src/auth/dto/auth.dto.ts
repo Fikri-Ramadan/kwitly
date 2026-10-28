@@ -1,4 +1,6 @@
-import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { OneTimeTokenValues } from '../auth.service.js';
+import type { OneTimeType } from '../auth.service.js';
 
 export class RegisterDto {
   @IsEmail()
@@ -39,4 +41,15 @@ export class TokenDto {
   @IsString()
   @IsNotEmpty()
   token: string;
+}
+
+
+export class SendMailDto {
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(OneTimeTokenValues)
+  type: OneTimeType;
+
+  @IsEmail()
+  email: string;
 }

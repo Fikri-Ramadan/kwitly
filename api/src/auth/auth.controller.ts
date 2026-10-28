@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
-import { EmailDto, ForgotPasswordDto, LoginDto, RegisterDto, TokenDto } from './dto/auth.dto.js';
+import { EmailDto, ForgotPasswordDto, LoginDto, RegisterDto, SendMailDto, TokenDto } from './dto/auth.dto.js';
 import { Public } from '../common/decorator/public.decorator.js';
 import { RateLimit } from '../common/decorator/rate-limit.decorator.js';
 
@@ -82,5 +82,16 @@ export class AuthController {
   @Post('refresh')
   async refresh(@Body() { token }: TokenDto) {
     return await this.authService.refresh(token);
+  }
+
+  @RateLimit({
+    scope: 'send-email',
+    ip: { limit: 5, windowSeconds: HOUR },
+    email: { limit: 5, windowSeconds: HOUR },
+  })
+  @Post('send-mail')
+  async sendMail(@Body() { type, email }: SendMailDto) {
+    await this.authService.resendMail(type, email);
+    return { message: 'The link has been sent successfully. Please check your email.' };
   }
 }
