@@ -86,8 +86,8 @@ export class AuthController {
 
   @RateLimit({
     scope: 'send-email',
-    ip: { limit: 5, windowSeconds: HOUR },
-    email: { limit: 5, windowSeconds: HOUR },
+    ip: { limit: 1, windowSeconds: MIN },
+    email: { limit: 1, windowSeconds: MIN },
   })
   @Post('send-mail')
   async sendMail(@Body() { type, email }: SendMailDto) {
