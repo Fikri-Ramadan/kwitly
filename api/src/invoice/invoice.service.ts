@@ -3,7 +3,17 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateDto, UpdateDto } from './dto/invoice.dto.js';
 import { ProductService } from '../product/product.service.js';
 import { ClientService } from '../client/client.service.js';
-import { Prisma } from '../generated/prisma/client.js';
+import { InvoiceStatus, Prisma } from '../generated/prisma/client.js';
+
+const ALLOWED_TRANSITION: Record<InvoiceStatus, InvoiceStatus[]> = {
+  DRAFT: ['PENDING', 'CANCELLED'],
+  PENDING: ['PAID', 'OVERDUE', 'CANCELLED'],
+  OVERDUE: ['PAID', 'CANCELLED'],
+  PAID: [],
+  CANCELLED: []
+};
+
+const USER_SETABLE: InvoiceStatus[] = ['PENDING', 'PAID', 'CANCELLED'];
 
 @Injectable()
 export class InvoiceService {
@@ -93,13 +103,6 @@ export class InvoiceService {
     const totals = recalc ? this.calculateTotals(items ?? invoice.items, invoiceData.taxPercent ?? invoice.taxPercent)
       : undefined;
 
-    const itemsToCreate = items.map(item => ({
-      productId: item.productId,
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-    }));
-
     return this.prisma.$transaction(async (tx) => {
       const { count } = await tx.invoice.updateMany({
         where: { id: invoice.id, status: 'DRAFT' },
@@ -133,6 +136,24 @@ export class InvoiceService {
         where: { id: invoice.id },
         include: { items: true }
       });
+    });
+  }
+
+  async updateStatus(invoiceNumber: string, userId: string, status: InvoiceStatus) {
+    const invoice = await this.isMyInvoice(invoiceNumber, userId);
+    if (!USER_SETABLE.includes(status)) {
+      throw new ForbiddenException(`You are unable set status: ${status}.`);
+    }
+    if (!ALLOWED_TRANSITION[invoice.status].includes(status)) {
+      throw new BadRequestException(`Invoice status cannot set ${invoice.status} to ${status}.`);
+    }
+
+    return await this.prisma.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        status,
+        paidAt: status === 'PAID' ? new Date() : null
+      }
     });
   }
 

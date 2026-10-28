@@ -1,4 +1,4 @@
-import { ArrayNotEmpty, IsArray, IsDate, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
+import { ArrayNotEmpty, IsArray, IsDate, IsIn, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
 import { Type } from 'class-transformer';
 import { InvoiceStatus } from "../../generated/prisma/enums.js";
 import { PartialType } from "@nestjs/mapped-types";
@@ -53,3 +53,8 @@ export class ItemDto {
 }
 
 export class UpdateDto extends PartialType(CreateDto) { }
+
+export class StatusDto {
+  @IsIn([InvoiceStatus.PENDING, InvoiceStatus.PAID, InvoiceStatus.CANCELLED])
+  status: InvoiceStatus;
+}

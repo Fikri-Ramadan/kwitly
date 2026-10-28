@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { Public } from '../common/decorator/public.decorator.js';
 import { InvoiceService } from './invoice.service.js';
 import { User } from '../common/decorator/user.decorator.js';
-import { CreateDto, UpdateDto } from './dto/invoice.dto.js';
+import { CreateDto, StatusDto, UpdateDto } from './dto/invoice.dto.js';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -38,5 +38,14 @@ export class InvoiceController {
     @Body() updateDto: UpdateDto
   ) {
     return await this.invoiceService.update(invNumber, user.sub, updateDto);
+  }
+
+  @Patch(':invNumber')
+  async updateInvoiceStatus(
+    @Param('invNumber') invNumber: string,
+    @Query() query: StatusDto,
+    @User() user: { sub: string; },
+  ) {
+    return await this.invoiceService.updateStatus(invNumber, user.sub, query.status)
   }
 }
