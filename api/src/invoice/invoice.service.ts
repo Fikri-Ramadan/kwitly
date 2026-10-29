@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateDto, UpdateDto } from './dto/invoice.dto.js';
 import { ProductService } from '../product/product.service.js';
 import { ClientService } from '../client/client.service.js';
-import { InvoiceStatus, Prisma } from '../generated/prisma/client.js';
+import { Frequency, InvoiceStatus, Prisma } from '../generated/prisma/client.js';
 
 const ALLOWED_TRANSITION: Record<InvoiceStatus, InvoiceStatus[]> = {
   DRAFT: ['PENDING', 'CANCELLED'],
@@ -12,8 +12,15 @@ const ALLOWED_TRANSITION: Record<InvoiceStatus, InvoiceStatus[]> = {
   PAID: [],
   CANCELLED: []
 };
-
 const USER_SETABLE: InvoiceStatus[] = ['PENDING', 'PAID', 'CANCELLED'];
+type RecurringTemplate = {
+  items: { productId: string; description: string; quantity: number; unitPrice: number; }[];
+  taxPercent: number;
+  dueInDays: number;
+  paymentTerms?: string;
+  notes?: string;
+  autoSend: boolean;
+};
 
 @Injectable()
 export class InvoiceService {
@@ -35,7 +42,8 @@ export class InvoiceService {
 
   async create(userId: string, data: CreateDto) {
     const {
-      items, taxPercent = 0, clientId, issueDate, dueDate, status, notes, paymentTerms
+      items, taxPercent = 0, clientId, issueDate, dueDate, status,
+      notes, paymentTerms, recurringFrequency, recurringEndDate, autoSend, dueInDays
     } = data;
 
     this.validateDate(issueDate, dueDate);
@@ -48,6 +56,7 @@ export class InvoiceService {
 
       const number = await this.generateNumber(tx, userId);
       const { subtotal, tax, total } = this.calculateTotals(items, taxPercent);
+
       const itemsToCreate = items.map(item => ({
         productId: item.productId,
         description: item.description,
@@ -55,86 +64,142 @@ export class InvoiceService {
         unitPrice: item.unitPrice,
       }));
 
+      const shouldCreateRecurring = recurringFrequency && recurringEndDate && typeof autoSend === 'boolean' && typeof dueInDays === 'number';
+      const recurringId = shouldCreateRecurring ?
+        await this.handleRecurring(tx, {
+          userId, clientId, issueDate,
+          endDate: recurringEndDate,
+          frequency: recurringFrequency,
+          template: {
+            autoSend, taxPercent, notes, paymentTerms, dueInDays, items: itemsToCreate,
+          }
+        }) : null;
+
       const invoice = await tx.invoice.create({
         data: {
-          userId,
-          clientId,
-          number,
-          issueDate,
-          dueDate,
+          userId, clientId, number, issueDate, dueDate, notes,
+          paymentTerms, taxPercent, tax, subtotal, total, recurringId,
           status: status === 'PENDING' ? 'PENDING' : 'DRAFT',
-          notes,
-          paymentTerms,
-          taxPercent,
-          tax,
-          subtotal,
-          total,
-          items: {
-            create: itemsToCreate
-          }
+          items: { create: itemsToCreate },
         },
       });
 
-      return invoice;
+      return await tx.invoice.findUniqueOrThrow({
+        where: { id: invoice.id },
+        include: { items: true, recurring: true }
+      });
     });
   }
 
   async update(invoiceNumber: string, userId: string, data: UpdateDto) {
     const invoice = await this.isMyInvoice(invoiceNumber, userId);
-    if (invoice.status !== 'DRAFT') throw new BadRequestException('Unable to update invoice because status is not DRAFT.');
+    if (invoice.status !== 'DRAFT') throw new BadRequestException('Only DRAFT invoices can be updated.');
 
-    const { items, ...invoiceData } = data;
-    this.validateDate(invoiceData.issueDate ?? invoice.issueDate, invoiceData.dueDate ?? invoice.dueDate);
-    if (items === undefined || items?.length === 0) {
+    const {
+      items, recurringFrequency, recurringEndDate, autoSend, dueInDays, ...invoiceData
+    } = data;
+
+    if (items !== undefined && items.length === 0) {
       throw new BadRequestException('Invoice must have at least one item.');
     }
 
-    if (invoiceData.clientId) {
-      await this.clientService.isMyClient(invoiceData.clientId, userId);
-    }
+    const issueDate = invoiceData.issueDate ?? invoice.issueDate;
+    const dueDate = invoiceData.dueDate ?? invoice.dueDate;
+    this.validateDate(issueDate, dueDate);
 
+    if (invoiceData.clientId) await this.clientService.isMyClient(invoiceData.clientId, userId);
     if (items) {
-      const productIds = [...new Set(data.items?.map(item => item.productId))];
+      const productIds = [...new Set(items.map(item => item.productId))];
       const isValid = await this.productService.validateUserProducts(productIds, userId);
       if (!isValid) throw new ForbiddenException('One or more products are invalid or do not belong to you.');
     }
 
-    const recalc = items !== undefined || invoiceData.taxPercent !== undefined;
-    const totals = recalc ? this.calculateTotals(items ?? invoice.items, invoiceData.taxPercent ?? invoice.taxPercent)
-      : undefined;
+    const itemsToStore = (items ?? invoice.items).map(it => ({
+      productId: it.productId,
+      description: it.description,
+      quantity: Number(it.quantity),
+      unitPrice: Number(it.unitPrice),
+    }));
+    const taxPercent = invoiceData.taxPercent ?? invoice.taxPercent;
+    const totals = items !== undefined || invoiceData.taxPercent !== undefined
+      ? this.calculateTotals(itemsToStore, taxPercent)
+      : null;
+
+    // ---- rencana recurring ----
+    const tpl = invoice.recurring?.template as RecurringTemplate | undefined;
+    const removeRecurring = recurringFrequency === null && !!invoice.recurringId;
+    const frequency = recurringFrequency ?? invoice.recurring?.frequency;
+    const endDate = recurringEndDate ?? invoice.recurring?.endDate;
+
+    if (recurringFrequency && !endDate) {
+      throw new BadRequestException('recurringEndDate is required when recurringFrequency is set.');
+    }
+    if (endDate && new Date(endDate) < new Date(issueDate)) {
+      throw new BadRequestException('Recurring end date cannot be before issue date.');
+    }
+
+    const recurringInput = recurringFrequency !== undefined || recurringEndDate !== undefined;
+    const touchesTemplate = [
+      items, autoSend, dueInDays, invoiceData.taxPercent, invoiceData.notes,
+      invoiceData.paymentTerms, invoiceData.clientId, invoiceData.issueDate,
+    ].some(v => v !== undefined);
+    // template ikut disinkronkan walau user hanya mengubah items/pajak/dll
+    const syncRecurring = !removeRecurring && !!frequency && !!endDate && (recurringInput || touchesTemplate);
 
     return this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.invoice.updateMany({
-        where: { id: invoice.id, status: 'DRAFT' },
-        data: {
-          clientId: invoiceData.clientId,
-          issueDate: invoiceData.issueDate,
-          dueDate: invoiceData.dueDate,
-          paymentTerms: invoiceData.paymentTerms,
-          notes: invoiceData.notes,
-          taxPercent: invoiceData.taxPercent,
-          ...(totals && { subtotal: totals.subtotal, tax: totals.tax, total: totals.total })
-        }
-      });
+      let recurringId = invoice.recurringId;
 
-      if (count !== 1) throw new ConflictException('Invoice is no longer a DRAFT. Reload and try again.');
+      if (syncRecurring) {
+        recurringId = await this.handleRecurring(tx, {
+          userId,
+          clientId: invoiceData.clientId ?? invoice.clientId,
+          issueDate,
+          endDate: endDate!,
+          frequency: frequency!,
+          template: {
+            autoSend: autoSend ?? tpl?.autoSend ?? false,
+            taxPercent: Number(taxPercent),
+            notes: invoiceData.notes ?? invoice.notes ?? '',
+            paymentTerms: invoiceData.paymentTerms ?? invoice.paymentTerms ?? '',
+            dueInDays: dueInDays ?? tpl?.dueInDays ?? 1,
+            items: itemsToStore,
+          }
+        }, invoice.recurringId);
+      } else if (removeRecurring) {
+        recurringId = null;
+      }
 
-      if (data.items) {
-        await tx.invoiceItem.deleteMany({ where: { invoiceId: invoice.id } });
-        await tx.invoiceItem.createMany({
-          data: data.items.map((it) => ({
-            invoiceId: invoice.id,
-            productId: it.productId,
-            description: it.description,
-            quantity: it.quantity,
-            unitPrice: it.unitPrice,
-          })),
+      try {
+        // status: 'DRAFT' di where mencegah race dengan updateStatus()
+        await tx.invoice.update({
+          where: { id: invoice.id, status: 'DRAFT' },
+          data: {
+            ...invoiceData,
+            recurringId,
+            ...(totals && { subtotal: totals.subtotal, tax: totals.tax, total: totals.total }),
+            ...(items && {
+              items: {
+                deleteMany: {},
+                create: itemsToStore
+              }
+            })
+          }
         });
+      } catch (e) {
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+          throw new ConflictException('Invoice was changed by another request. Please refresh and try again.');
+        }
+        throw e;
+      }
+
+      // hapus recurring SETELAH invoice tidak lagi merujuknya (hindari pelanggaran FK)
+      if (removeRecurring) {
+        await tx.recurringInvoice.delete({ where: { id: invoice.recurringId! } });
       }
 
       return await tx.invoice.findUniqueOrThrow({
         where: { id: invoice.id },
-        include: { items: true }
+        include: { items: true, recurring: true }
       });
     });
   }
@@ -167,10 +232,47 @@ export class InvoiceService {
       },
       include: {
         items: true,
+        recurring: true
       }
     });
     if (!invoice) throw new NotFoundException('Invoice not found.');
     return invoice;
+  }
+
+  private async handleRecurring(
+    tx: Prisma.TransactionClient, data: {
+      userId: string,
+      clientId: string,
+      frequency: Frequency,
+      issueDate: Date,
+      endDate: Date;
+      template: RecurringTemplate;
+    },
+    existingId?: string | null
+  ) {
+    const anchorDay = data.issueDate.getUTCDate();
+    const nextRunAt = this.computeNextRun(data.frequency, data.issueDate, anchorDay);
+
+    const payload = {
+      clientId: data.clientId,
+      userId: data.userId,
+      frequency: data.frequency,
+      anchorDay,
+      nextRunAt,
+      endDate: data.endDate,
+      template: data.template as any
+    };
+
+    if (existingId) {
+      const updated = await tx.recurringInvoice.update({
+        where: { id: existingId },
+        data: payload
+      });
+      return updated.id;
+    }
+
+    const created = await tx.recurringInvoice.create({ data: payload });
+    return created.id;
   }
 
   private validateDate(issueDate: Date, dueDate: Date) {
@@ -203,5 +305,27 @@ export class InvoiceService {
     });
     const sequentialNumber = String(count.last).padStart(4, '0');
     return `INV-${year}-${sequentialNumber}`;
+  }
+
+  private computeNextRun(
+    frequency: Frequency,
+    from: Date,
+    anchorDay: number
+  ): Date {
+    switch (frequency) {
+      case 'WEEKLY':
+        return new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000);
+      case 'MONTHLY':
+        return this.addMonthsClamped(from, 1, anchorDay);
+      case 'YEARLY':
+        return this.addMonthsClamped(from, 12, anchorDay);
+    }
+  }
+
+  private addMonthsClamped(from: Date, months: number, anchorDay: number): Date {
+    const year = from.getUTCFullYear();
+    const month = from.getUTCMonth() + months;
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(year, month, Math.min(lastDay, anchorDay)));
   }
 }

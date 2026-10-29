@@ -8,18 +8,19 @@ datasource db {
 }
 
 model User {
-  id              String           @id @default(uuid())
-  email           String           @unique
-  password        String?
-  emailVerified   Boolean          @default(false)
-  authTokens      AuthToken[]
-  profile         Profile?
-  clients         Client[]
-  categories      Category[]
-  products        Product[]
-  invoices        Invoice[]
-  invoiceCounters InvoiceCounter[]
-  createdAt       DateTime         @default(now())
+  id                String             @id @default(uuid())
+  email             String             @unique
+  password          String?
+  emailVerified     Boolean            @default(false)
+  authTokens        AuthToken[]
+  profile           Profile?
+  clients           Client[]
+  categories        Category[]
+  products          Product[]
+  invoices          Invoice[]
+  invoiceCounters   InvoiceCounter[]
+  recurringInvoices RecurringInvoice[]
+  createdAt         DateTime           @default(now())
 }
 
 model Profile {
@@ -35,18 +36,19 @@ model Profile {
 }
 
 model Client {
-  id              String    @id @default(uuid())
-  userId          String
-  user            User      @relation(fields: [userId], references: [id])
-  name            String
-  email           String
-  phone           String?
-  address         String?
-  paymentTermDays Int       @default(14)
-  paymentMethod   String?
-  deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  invoices        Invoice[]
+  id                String             @id @default(uuid())
+  userId            String
+  user              User               @relation(fields: [userId], references: [id])
+  name              String
+  email             String
+  phone             String?
+  address           String?
+  paymentTermDays   Int                @default(14)
+  paymentMethod     String?
+  deletedAt         DateTime?
+  createdAt         DateTime           @default(now())
+  invoices          Invoice[]
+  recurringInvoices RecurringInvoice[]
 
   @@unique([userId, email])
 }
@@ -67,7 +69,7 @@ model Category {
 model Product {
   id          String    @id @default(uuid())
   userId      String
-  user        User      @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
   categoryId  String
   category    Category  @relation(fields: [categoryId], references: [id])
   name        String
@@ -117,25 +119,26 @@ enum InvoiceStatus {
 }
 
 model Invoice {
-  id           String        @id @default(uuid())
+  id           String            @id @default(uuid())
   userId       String
-  user         User          @relation(fields: [userId], references: [id])
+  user         User              @relation(fields: [userId], references: [id])
   clientId     String
-  client       Client        @relation(fields: [clientId], references: [id])
+  client       Client            @relation(fields: [clientId], references: [id])
   number       String //INV-2026-0001
   issueDate    DateTime
   dueDate      DateTime
-  status       InvoiceStatus @default(DRAFT)
+  status       InvoiceStatus     @default(DRAFT)
   paymentTerms String?
   notes        String?
-  subtotal     Decimal       @db.Decimal(14, 2)
-  taxPercent   Decimal       @default(0) @db.Decimal(5, 2)
-  tax          Decimal       @default(0) @db.Decimal(14, 2)
-  total        Decimal       @db.Decimal(14, 2)
+  subtotal     Decimal           @db.Decimal(14, 2)
+  taxPercent   Decimal           @default(0) @db.Decimal(5, 2)
+  tax          Decimal           @default(0) @db.Decimal(14, 2)
+  total        Decimal           @db.Decimal(14, 2)
   paidAt       DateTime?
   items        InvoiceItem[]
-  // recurring...
-  createdAt    DateTime      @default(now())
+  recurringId  String?
+  recurring    RecurringInvoice? @relation(fields: [recurringId], references: [id])
+  createdAt    DateTime          @default(now())
 
   @@unique([userId, number])
   @@index([userId, status])
@@ -147,7 +150,7 @@ model InvoiceItem {
   id          String   @id @default(uuid())
   invoiceId   String
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  productId   String?
+  productId   String
   description String
   quantity    Int
   unitPrice   Decimal  @db.Decimal(14, 2)
@@ -163,4 +166,25 @@ model InvoiceCounter {
   @@id([userId, year])
 }
 
-// recurring...
+enum Frequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model RecurringInvoice {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id])
+  frequency Frequency
+  anchorDay Int
+  nextRunAt DateTime
+  endDate   DateTime
+  isActive  Boolean   @default(true)
+  template  Json // items, terms, notes
+  invoices  Invoice[]
+
+  @@index([nextRunAt, isActive])
+}
