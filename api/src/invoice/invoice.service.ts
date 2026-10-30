@@ -47,22 +47,22 @@ export class InvoiceService {
     } = data;
 
     this.validateDate(issueDate, dueDate);
+    await this.clientService.isMyClient(clientId, userId);
+
+    const productIds = [...new Set(items.map(item => item.productId))];
+    const isValid = await this.productService.validateUserProducts(productIds, userId);
+    if (!isValid) throw new ForbiddenException('One or more products are invalid or do not belong to you.');
+
+    const { subtotal, tax, total } = this.calculateTotals(items, taxPercent);
+    const itemsToCreate = items.map(item => ({
+      productId: item.productId,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    }));
 
     return await this.prisma.$transaction(async (tx) => {
-      await this.clientService.isMyClient(clientId, userId);
-      const productIds = [...new Set(items.map(item => item.productId))];
-      const isValid = await this.productService.validateUserProducts(productIds, userId);
-      if (!isValid) throw new ForbiddenException('One or more products are invalid or do not belong to you.');
-
       const number = await this.generateNumber(tx, userId);
-      const { subtotal, tax, total } = this.calculateTotals(items, taxPercent);
-
-      const itemsToCreate = items.map(item => ({
-        productId: item.productId,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-      }));
 
       const shouldCreateRecurring = recurringFrequency && recurringEndDate && typeof autoSend === 'boolean' && typeof dueInDays === 'number';
       const recurringId = shouldCreateRecurring ?
@@ -96,18 +96,18 @@ export class InvoiceService {
     if (invoice.status !== 'DRAFT') throw new BadRequestException('Only DRAFT invoices can be updated.');
 
     const {
-      items, recurringFrequency, recurringEndDate, autoSend, dueInDays, ...invoiceData
+      items, recurringFrequency, recurringEndDate, autoSend, dueInDays, ...newInvoiceData
     } = data;
 
     if (items !== undefined && items.length === 0) {
       throw new BadRequestException('Invoice must have at least one item.');
     }
 
-    const issueDate = invoiceData.issueDate ?? invoice.issueDate;
-    const dueDate = invoiceData.dueDate ?? invoice.dueDate;
+    const issueDate = newInvoiceData.issueDate ?? invoice.issueDate;
+    const dueDate = newInvoiceData.dueDate ?? invoice.dueDate;
     this.validateDate(issueDate, dueDate);
 
-    if (invoiceData.clientId) await this.clientService.isMyClient(invoiceData.clientId, userId);
+    if (newInvoiceData.clientId) await this.clientService.isMyClient(newInvoiceData.clientId, userId);
     if (items) {
       const productIds = [...new Set(items.map(item => item.productId))];
       const isValid = await this.productService.validateUserProducts(productIds, userId);
@@ -120,31 +120,30 @@ export class InvoiceService {
       quantity: Number(it.quantity),
       unitPrice: Number(it.unitPrice),
     }));
-    const taxPercent = invoiceData.taxPercent ?? invoice.taxPercent;
-    const totals = items !== undefined || invoiceData.taxPercent !== undefined
+    const taxPercent = newInvoiceData.taxPercent ?? invoice.taxPercent;
+    const totals = items !== undefined || newInvoiceData.taxPercent !== undefined
       ? this.calculateTotals(itemsToStore, taxPercent)
       : null;
 
-    // ---- rencana recurring ----
+    // ---- recurring ----
     const tpl = invoice.recurring?.template as RecurringTemplate | undefined;
     const removeRecurring = recurringFrequency === null && !!invoice.recurringId;
     const frequency = recurringFrequency ?? invoice.recurring?.frequency;
-    const endDate = recurringEndDate ?? invoice.recurring?.endDate;
+    const finalRecurringEndDate = recurringEndDate ?? invoice.recurring?.endDate;
 
-    if (recurringFrequency && !endDate) {
+    if (recurringFrequency && !finalRecurringEndDate) {
       throw new BadRequestException('recurringEndDate is required when recurringFrequency is set.');
     }
-    if (endDate && new Date(endDate) < new Date(issueDate)) {
-      throw new BadRequestException('Recurring end date cannot be before issue date.');
+    if (finalRecurringEndDate) {
+      this.validateDate(issueDate, finalRecurringEndDate, 'Recurring end date cannot be before issue date.');
     }
 
     const recurringInput = recurringFrequency !== undefined || recurringEndDate !== undefined;
     const touchesTemplate = [
-      items, autoSend, dueInDays, invoiceData.taxPercent, invoiceData.notes,
-      invoiceData.paymentTerms, invoiceData.clientId, invoiceData.issueDate,
+      items, autoSend, dueInDays, newInvoiceData.taxPercent, newInvoiceData.notes,
+      newInvoiceData.paymentTerms, newInvoiceData.clientId, newInvoiceData.issueDate,
     ].some(v => v !== undefined);
-    // template ikut disinkronkan walau user hanya mengubah items/pajak/dll
-    const syncRecurring = !removeRecurring && !!frequency && !!endDate && (recurringInput || touchesTemplate);
+    const syncRecurring = !removeRecurring && !!frequency && !!finalRecurringEndDate && (recurringInput || touchesTemplate);
 
     return this.prisma.$transaction(async (tx) => {
       let recurringId = invoice.recurringId;
@@ -152,15 +151,15 @@ export class InvoiceService {
       if (syncRecurring) {
         recurringId = await this.handleRecurring(tx, {
           userId,
-          clientId: invoiceData.clientId ?? invoice.clientId,
+          clientId: newInvoiceData.clientId ?? invoice.clientId,
           issueDate,
-          endDate: endDate!,
+          endDate: finalRecurringEndDate!,
           frequency: frequency!,
           template: {
             autoSend: autoSend ?? tpl?.autoSend ?? false,
             taxPercent: Number(taxPercent),
-            notes: invoiceData.notes ?? invoice.notes ?? '',
-            paymentTerms: invoiceData.paymentTerms ?? invoice.paymentTerms ?? '',
+            notes: newInvoiceData.notes ?? invoice.notes ?? '',
+            paymentTerms: newInvoiceData.paymentTerms ?? invoice.paymentTerms ?? '',
             dueInDays: dueInDays ?? tpl?.dueInDays ?? 1,
             items: itemsToStore,
           }
@@ -170,11 +169,10 @@ export class InvoiceService {
       }
 
       try {
-        // status: 'DRAFT' di where mencegah race dengan updateStatus()
         await tx.invoice.update({
           where: { id: invoice.id, status: 'DRAFT' },
           data: {
-            ...invoiceData,
+            ...newInvoiceData,
             recurringId,
             ...(totals && { subtotal: totals.subtotal, tax: totals.tax, total: totals.total }),
             ...(items && {
@@ -192,7 +190,6 @@ export class InvoiceService {
         throw e;
       }
 
-      // hapus recurring SETELAH invoice tidak lagi merujuknya (hindari pelanggaran FK)
       if (removeRecurring) {
         await tx.recurringInvoice.delete({ where: { id: invoice.recurringId! } });
       }
@@ -275,9 +272,10 @@ export class InvoiceService {
     return created.id;
   }
 
-  private validateDate(issueDate: Date, dueDate: Date) {
-    if (new Date(dueDate) < new Date(issueDate))
-      throw new BadRequestException('Due date cannot be before issue date.');
+  private validateDate(fromDate: Date, toDate: Date, message?: string) {
+    if (new Date(toDate) < new Date(fromDate)) {
+      throw new BadRequestException(message || 'End date cannot be before start date.');
+    }
   }
 
   private calculateTotals(
