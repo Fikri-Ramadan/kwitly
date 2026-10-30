@@ -1,8 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
-import { Public } from '../common/decorator/public.decorator.js';
 import { InvoiceService } from './invoice.service.js';
 import { User } from '../common/decorator/user.decorator.js';
-import { CreateDto, StatusDto, UpdateDto } from './dto/invoice.dto.js';
+import { CreateDto, InvoiceFilterDto, StatusDto, UpdateDto } from './dto/invoice.dto.js';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -10,9 +9,10 @@ export class InvoiceController {
 
   @Get()
   async getAllMyInvoices(
+    @Query() filters: InvoiceFilterDto,
     @User() user: { sub: string; }
   ) {
-    return await this.invoiceService.findMyInvoices(user.sub);
+    return await this.invoiceService.findMyInvoices(user.sub, filters);
   }
 
   @Get(':invNumber')

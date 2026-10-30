@@ -2,7 +2,7 @@ import {
   ArrayNotEmpty, IsArray, IsBoolean, IsDate, IsEnum, IsIn, IsInt, IsNotEmpty, IsNumber,
   IsOptional, IsPositive, IsString, IsUUID, Max, MaxLength, Min, ValidateIf, ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { Frequency, InvoiceStatus } from '../../generated/prisma/enums.js';
 import { OmitType, PartialType } from '@nestjs/mapped-types';
 
@@ -105,4 +105,75 @@ export class UpdateDto extends OmitType(PartialType(CreateDto), [
 export class StatusDto {
   @IsIn([InvoiceStatus.PENDING, InvoiceStatus.PAID, InvoiceStatus.CANCELLED])
   status: InvoiceStatus;
+}
+
+export class InvoiceFilterDto {
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsUUID()
+  clientId?: string;
+
+  @IsOptional()
+  @IsEnum(InvoiceStatus)
+  status?: InvoiceStatus;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isRecurring?: boolean;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  startDate?: Date;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  endDate?: Date;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  dueStartDate?: Date;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  dueEndDate?: Date;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  minTotal?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  maxTotal?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsEnum(['issueDate', 'dueDate', 'total', 'number'])
+  sortBy?: 'issueDate'| 'dueDate'| 'total'| 'number';
+
+  @IsOptional()
+  @IsString()
+  @IsEnum(['asc', 'desc'])
+  sortOrder?: 'asc' | 'desc' = 'desc';
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  page?: number = 1;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  limit?: number = 10;
 }

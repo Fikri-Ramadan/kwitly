@@ -22,6 +22,27 @@ type RecurringTemplate = {
   autoSend: boolean;
 };
 
+type FilterType = {
+  search?: string;
+  clientId?: string;
+
+  status?: InvoiceStatus;
+  isRecurring?: boolean;
+
+  startDate?: Date;
+  endDate?: Date;
+  dueStartDate?: Date;
+  dueEndDate?: Date;
+
+  minTotal?: number;
+  maxTotal?: number;
+
+  sortBy?: 'issueDate' | 'dueDate' | 'total' | 'number';
+  sortOrder?: 'asc' | 'desc';
+  page?: number,
+  limit?: number,
+};
+
 @Injectable()
 export class InvoiceService {
   constructor(
@@ -34,9 +55,50 @@ export class InvoiceService {
     return await this.isMyInvoice(invoiceNumber, userId);
   }
 
-  async findMyInvoices(userId: string) {
+  async findMyInvoices(userId: string, filters: FilterType) {
+    const {
+      search, status, clientId, startDate, endDate,
+      dueEndDate, dueStartDate, minTotal, maxTotal,
+      page = 1, limit = 10
+    } = filters;
+
     return await this.prisma.invoice.findMany({
-      where: { userId }
+      where: {
+        userId,
+        ...(search && {
+          OR: [
+            { number: { contains: search, mode: 'insensitive' } },
+            { client: { name: { contains: search, mode: 'insensitive' } } },
+            { notes: { contains: search, mode: 'insensitive' } }
+          ]
+        }),
+        ...(status && { status }),
+        ...(clientId && { clientId }),
+        ...((startDate || endDate) && {
+          issueDate: {
+            ...(startDate && { gte: new Date(startDate) }),
+            ...(endDate && { lte: new Date(endDate) }),
+          }
+        }),
+        ...((dueStartDate || dueEndDate) && {
+          dueDate: {
+            ...(dueStartDate && { gte: new Date(dueStartDate) }),
+            ...(dueEndDate && { lte: new Date(dueEndDate) }),
+          }
+        }),
+        ...((minTotal || maxTotal) && {
+          total: {
+            ...(minTotal && { gte: minTotal }),
+            ...(maxTotal && { lte: maxTotal }),
+          }
+        }),
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: { client: true, recurring: true },
+      orderBy: {
+        [filters.sortBy || 'createdAt']: filters.sortOrder || 'desc',
+      },
     });
   }
 
