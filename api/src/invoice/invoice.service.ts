@@ -1,9 +1,10 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateDto, UpdateDto } from './dto/invoice.dto.js';
 import { ProductService } from '../product/product.service.js';
 import { ClientService } from '../client/client.service.js';
 import { Frequency, InvoiceStatus, Prisma } from '../generated/prisma/client.js';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 const ALLOWED_TRANSITION: Record<InvoiceStatus, InvoiceStatus[]> = {
   DRAFT: ['PENDING', 'CANCELLED'],
@@ -13,6 +14,7 @@ const ALLOWED_TRANSITION: Record<InvoiceStatus, InvoiceStatus[]> = {
   CANCELLED: []
 };
 const USER_SETABLE: InvoiceStatus[] = ['PENDING', 'PAID', 'CANCELLED'];
+
 type RecurringTemplate = {
   items: { productId: string; description: string; quantity: number; unitPrice: number; }[];
   taxPercent: number;
@@ -45,10 +47,12 @@ type FilterType = {
 
 @Injectable()
 export class InvoiceService {
+  private readonly logger = new Logger(InvoiceService.name);
+
   constructor(
     private prisma: PrismaService,
     private productService: ProductService,
-    private clientService: ClientService
+    private clientService: ClientService,
   ) { }
 
   async findInvoiceByNumber(userId: string, invoiceNumber: string) {
@@ -387,5 +391,24 @@ export class InvoiceService {
     const month = from.getUTCMonth() + months;
     const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     return new Date(Date.UTC(year, month, Math.min(lastDay, anchorDay)));
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_2AM, {
+    timeZone: 'Asia/Jakarta'
+  })
+  async handleStatusInvoices() {
+    const now = new Date();
+    const { count } = await this.prisma.invoice.updateMany({
+      where: {
+        status: {
+          notIn: ['PAID', 'DRAFT', 'OVERDUE', 'CANCELLED']
+        },
+        dueDate: { lte: now }
+      },
+      data: {
+        status: 'OVERDUE'
+      }
+    });
+    this.logger.log(`Total invoice changed to OVERDUE: ${count}`);
   }
 }

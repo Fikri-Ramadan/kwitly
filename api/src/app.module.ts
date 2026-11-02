@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
@@ -25,6 +26,7 @@ import { InvoiceModule } from './invoice/invoice.module.js';
     //   appSecret: 'YOUR_APP_SECRET',
     //   serviceId: 'api',
     // }),
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'] }),
     PrismaModule,
     MailModule,
