@@ -1,15 +1,21 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module.js';
-import { AuthController } from './auth/auth.controller.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UserModule } from './user/user.module.js';
 import { MailModule } from './auth/mail.module.js';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth/auth.guard.js';
+import { ProfileModule } from './profile/profile.module.js';
+import { RateLimitModule } from './rate-limit/rate-limit.module.js';
+import { ClientModule } from './client/client.module.js';
+import { CategoryModule } from './category/category.module.js';
+import { ProductModule } from './product/product.module.js';
+import { InvoiceModule } from './invoice/invoice.module.js';
 
 @Module({
   imports: [
@@ -20,11 +26,18 @@ import { AuthGuard } from './auth/auth.guard.js';
     //   appSecret: 'YOUR_APP_SECRET',
     //   serviceId: 'api',
     // }),
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'] }),
     PrismaModule,
     MailModule,
     AuthModule,
     UserModule,
+    ProfileModule,
+    RateLimitModule,
+    ClientModule,
+    CategoryModule,
+    ProductModule,
+    InvoiceModule,
   ],
   controllers: [AppController],
   providers: [

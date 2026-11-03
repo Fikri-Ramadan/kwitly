@@ -8,29 +8,82 @@ datasource db {
 }
 
 model User {
-  id            String      @id @default(uuid())
-  email         String      @unique
-  password      String?
-  emailVerified Boolean     @default(false)
-  authTokens    AuthToken[]
-  profile       Profile?
-  // clients       Client[]
-  // products      Product[]
-  // invoices      Invoice[]
-  createdAt     DateTime    @default(now())
+  id                String             @id @default(uuid())
+  email             String             @unique
+  password          String?
+  emailVerified     Boolean            @default(false)
+  authTokens        AuthToken[]
+  profile           Profile?
+  clients           Client[]
+  categories        Category[]
+  products          Product[]
+  invoices          Invoice[]
+  invoiceCounters   InvoiceCounter[]
+  recurringInvoices RecurringInvoice[]
+  createdAt         DateTime           @default(now())
 }
 
 model Profile {
-  id String @id @default(uuid())
-  userId String @unique
-  user User @relation(fields: [userId], references: [id])
-  fullName String
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  fullName  String
+  company   String?
+  phone     String?
+  address   String?
+  logoUrl   String?
+  createdAt DateTime @default(now())
+}
+
+model Client {
+  id                String             @id @default(uuid())
+  userId            String
+  user              User               @relation(fields: [userId], references: [id])
+  name              String
+  email             String
+  phone             String?
+  address           String?
+  paymentTermDays   Int                @default(14)
+  paymentMethod     String?
+  deletedAt         DateTime?
+  createdAt         DateTime           @default(now())
+  invoices          Invoice[]
+  recurringInvoices RecurringInvoice[]
+
+  @@unique([userId, email])
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  slug      String
+  name      String
+  deletedAt DateTime?
+  products  Product[]
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, slug])
+}
+
+model Product {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  name        String
+  description String?
+  price       Decimal   @db.Decimal(14, 2)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
 }
 
 enum AuthTokenType {
   EMAIL_VERIFY
   MAGIC_LINK
   REFRESH
+  FORGOT_PASS
 }
 
 model AuthToken {
@@ -46,4 +99,93 @@ model AuthToken {
 
   @@index([userId, type])
   @@index([familyId])
+}
+
+model RateLimit {
+  key       String   @id
+  hits      Int
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Invoice {
+  id           String            @id @default(uuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id])
+  clientId     String
+  client       Client            @relation(fields: [clientId], references: [id])
+  number       String //INV-2026-0001
+  issueDate    DateTime
+  dueDate      DateTime
+  status       InvoiceStatus     @default(DRAFT)
+  paymentTerms String?
+  notes        String?
+  subtotal     Decimal           @db.Decimal(14, 2)
+  taxPercent   Decimal           @default(0) @db.Decimal(5, 2)
+  tax          Decimal           @default(0) @db.Decimal(14, 2)
+  total        Decimal           @db.Decimal(14, 2)
+  paidAt       DateTime?
+  items        InvoiceItem[]
+  recurringId  String?
+  recurring    RecurringInvoice? @relation(fields: [recurringId], references: [id])
+  createdAt    DateTime          @default(now())
+
+  @@unique([userId, number])
+  @@index([userId, status])
+  @@index([userId, dueDate])
+  @@index([clientId])
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId   String
+  description String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(14, 2)
+  createdAt   DateTime @default(now())
+}
+
+model InvoiceCounter {
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year   Int
+  last   Int    @default(0)
+
+  @@id([userId, year])
+}
+
+enum Frequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model RecurringInvoice {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id])
+  frequency Frequency
+  anchorDay Int
+  nextRunAt DateTime
+  lastRunAt DateTime?
+  endDate   DateTime
+  isActive  Boolean   @default(true)
+  template  Json // items, terms, notes
+  invoices  Invoice[]
+
+  @@index([nextRunAt, isActive])
 }

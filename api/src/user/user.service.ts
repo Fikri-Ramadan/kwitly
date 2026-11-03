@@ -21,8 +21,29 @@ export class UserService {
     });
   }
 
+  async upsert(email: string) {
+    return await this.prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        profile: {
+          create: {
+            fullName: email.split('@')[0]
+          }
+        }
+      }
+    });
+  }
+
   async findByEmail(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    return user;
+  }
+
+  async findById(id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     return user;
   }
@@ -31,6 +52,21 @@ export class UserService {
     await this.prisma.user.update({
       where: { id },
       data: { emailVerified: true }
+    });
+  }
+
+  async markEmailVerifiedAndResetPassword(id: string) {
+    await this.prisma.user.update({
+      where: { id },
+      data: { emailVerified: true, password: null }
+    });
+  }
+
+  async updatePassword(id: string, password: string) {
+    const user = await this.findById(id);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password }
     });
   }
 }

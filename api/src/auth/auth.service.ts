@@ -7,13 +7,16 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ConfigService } from '@nestjs/config';
 
-type OneTimeType = 'EMAIL_VERIFY' | 'MAGIC_LINK';
+export const OneTimeTokenValues = ['EMAIL_VERIFY', 'MAGIC_LINK', 'FORGOT_PASS'] as const;
+export type OneTimeType = (typeof OneTimeTokenValues)[number];
 type TokenType = OneTimeType | 'REFRESH';
 
 const BCRYPT_ROUNDS = 12;
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 Hours
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days
-export const ACCESS_TOKEN_TTL_S = 15 * 60; // 15 Minutes
+const MAGIC_LINK_TTL_MS = 15 * 60 * 1000; // 15 Minutes
+const FORGOT_PASS_TTL_MS = 60 * 60 * 1000; // 60 Minutes
+export const ACCESS_TOKEN_TTL_S = 300 * 60; // 15 Minutes
 
 @Injectable()
 export class AuthService {
@@ -32,13 +35,53 @@ export class AuthService {
     return result;
   }
 
+  async requestMagicLink(email: string) {
+    const user = await this.userService.upsert(email);
+    await this.invalidateTokens(user.id, 'MAGIC_LINK');
+    const token = await this.createToken(user.id, 'MAGIC_LINK', MAGIC_LINK_TTL_MS);
+    await this.mailService.sendMagicLink(user.email, this.webLink('/verify-magic-link', token));
+  }
+
+  async verifyMagicLink(token: string) {
+    const userId = await this.consumeToken(token, 'MAGIC_LINK');
+    const user = await this.userService.findById(userId);
+    if (!user.emailVerified) {
+      await this.userService.markEmailVerifiedAndResetPassword(user.id);
+    }
+    return await this.issueSession(user);
+  }
+
   async register(email: string, password: string) {
-    const newUser = await this.userService.create(
+    const record = await this.userService.create(
       email,
       await bcrypt.hash(password, BCRYPT_ROUNDS),
     );
-    const token = await this.createToken(newUser.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
-    await this.mailService.sendVerification(email, this.webLink('/verify-email', token));
+    const token = await this.createToken(record.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
+    await this.mailService.sendVerification(record.email, this.webLink('/verify-email', token));
+  }
+
+  async resendMail(type: OneTimeType, email: string) {
+    const user = await this.userService.findByEmail(email);
+    switch (type) {
+      case 'EMAIL_VERIFY': {
+        await this.invalidateTokens(user.id, 'EMAIL_VERIFY');
+        const token = await this.createToken(user.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
+        await this.mailService.sendVerification(email, this.webLink('/verify-email', token));
+        break;
+      }
+      case 'MAGIC_LINK': {
+        await this.invalidateTokens(user.id, 'MAGIC_LINK');
+        const token = await this.createToken(user.id, 'MAGIC_LINK', MAGIC_LINK_TTL_MS);
+        await this.mailService.sendMagicLink(user.email, this.webLink('/verify-magic-link', token));
+        break;
+      }
+      case 'FORGOT_PASS': {
+        await this.invalidateTokens(user.id, 'FORGOT_PASS');
+        const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
+        await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', token));
+        break;
+      }
+    }
   }
 
   async verifyEmail(token: string) {
@@ -90,6 +133,32 @@ export class AuthService {
       this.revokeFamily(record.familyId);
   }
 
+  async requestResetPassword(email: string) {
+    const user = await this.userService.findByEmail(email);
+    await this.invalidateTokens(user.id, 'FORGOT_PASS');
+    const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
+    await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', token));
+  }
+
+  async resetPassword(token: string, password: string) {
+    const userId = await this.consumeToken(token, 'FORGOT_PASS');
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword, emailVerified: true }
+      }),
+      this.prisma.authToken.updateMany({
+        where: {
+          userId, usedAt: null,
+          type: { in: ['FORGOT_PASS', 'REFRESH', 'MAGIC_LINK'] }
+        },
+        data: { usedAt: new Date() }
+      })
+    ]);
+    await this.userService.updatePassword(userId, hashedPassword);
+  }
+
   private async issueSession(
     user: { id: string, email: string; },
     familyId: string = randomUUID()
@@ -139,6 +208,13 @@ export class AuthService {
 
     if (count !== 1) throw invalid;
     return record.userId;
+  }
+
+  private async invalidateTokens(userId: string, type: TokenType) {
+    await this.prisma.authToken.updateMany({
+      where: { userId, type, usedAt: null },
+      data: { usedAt: new Date() }
+    });
   }
 
   private async revokeFamily(familyId: string) {
