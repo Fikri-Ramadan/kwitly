@@ -181,6 +181,7 @@ model RecurringInvoice {
   frequency Frequency
   anchorDay Int
   nextRunAt DateTime
+  lastRunAt DateTime?
   endDate   DateTime
   isActive  Boolean   @default(true)
   template  Json // items, terms, notes

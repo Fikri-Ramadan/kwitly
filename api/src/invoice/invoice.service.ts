@@ -5,6 +5,7 @@ import { ProductService } from '../product/product.service.js';
 import { ClientService } from '../client/client.service.js';
 import { Frequency, InvoiceStatus, Prisma } from '../generated/prisma/client.js';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { MailService } from '../auth/mail.service.js';
 
 const ALLOWED_TRANSITION: Record<InvoiceStatus, InvoiceStatus[]> = {
   DRAFT: ['PENDING', 'CANCELLED'],
@@ -53,6 +54,7 @@ export class InvoiceService {
     private prisma: PrismaService,
     private productService: ProductService,
     private clientService: ClientService,
+    private mailService: MailService
   ) { }
 
   async findInvoiceByNumber(userId: string, invoiceNumber: string) {
@@ -410,5 +412,92 @@ export class InvoiceService {
       }
     });
     this.logger.log(`Total invoice changed to OVERDUE: ${count}`);
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_5AM, {
+    timeZone: 'Asia/Jakarta'
+  })
+  async handleRecurringInvoices() {
+    const now = new Date();
+    this.logger.log(`Cron started: Processing recurring invoices at ${now.toISOString()}`);
+    const recurringInvoices = await this.prisma.recurringInvoice.findMany({
+      where: {
+        isActive: true,
+        endDate: { gte: now },
+        nextRunAt: { lte: now },
+      },
+      include: { client: true }
+    });
+
+    if (recurringInvoices.length === 0) {
+      this.logger.log('No recurring invoices due for processing.');
+      return;
+    }
+
+    for (const rec of recurringInvoices) {
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          const template: RecurringTemplate = rec.template as unknown as RecurringTemplate;
+          const { tax, subtotal, total } = this.calculateTotals(template.items, template.taxPercent);
+          const dueDate = new Date(now);
+          dueDate.setDate(now.getDate() + template.dueInDays);
+
+          const itemsToCreate = template.items.map(item => ({
+            productId: item.productId,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          }));
+
+          const newInvoice = await tx.invoice.create({
+            data: {
+              number: await this.generateNumber(tx, rec.userId),
+              recurringId: rec.id,
+              userId: rec.userId,
+              clientId: rec.clientId,
+              issueDate: now,
+              dueDate,
+              status: 'PENDING',
+              taxPercent: template.taxPercent,
+              tax, subtotal, total,
+              ...(template.notes && { notes: template.notes }),
+              ...(template.paymentTerms && { paymentTerms: template.notes }),
+              items: { create: itemsToCreate },
+            },
+            include: {
+              client: true,
+              user: { include: { profile: true } }
+            }
+          });
+
+          const newNextRunAt = this.computeNextRun(rec.frequency, rec.nextRunAt, rec.anchorDay);
+          await tx.recurringInvoice.update({
+            where: { id: rec.id },
+            data: {
+              nextRunAt: newNextRunAt,
+              lastRunAt: now
+            }
+          });
+
+          if (template.autoSend) {
+            this.mailService.sendInvoice(
+              rec.client.email,
+              newInvoice.user.profile?.company ?? newInvoice.user.profile?.fullName ?? newInvoice.user.email,
+              {
+                number: newInvoice.number,
+                clientName: rec.client.name,
+                currency: 'IDR',
+                total: Number(total).toLocaleString(),
+                dueDate: dueDate.toLocaleDateString('id-ID')
+              }
+            );
+          }
+
+          this.logger.log(`Successfully generated invoice ${newInvoice.number} for recurring ID: ${rec.id}`);
+        });
+      } catch (error: any) {
+        this.logger.error(`[Cron Error] Recurring ID ${rec.id}: ${error?.message}`, error?.stack);
+      }
+    }
   }
 }
