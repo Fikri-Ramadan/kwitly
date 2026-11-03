@@ -278,13 +278,32 @@ export class InvoiceService {
       throw new BadRequestException(`Invoice status cannot set ${invoice.status} to ${status}.`);
     }
 
-    return await this.prisma.invoice.update({
+    const updatedInvoice = await this.prisma.invoice.update({
       where: { id: invoice.id },
       data: {
         status,
         paidAt: status === 'PAID' ? new Date() : null
+      },
+      include: {
+        client: true,
+        user: { include: { profile: true } }
       }
     });
+    if (updatedInvoice.status === 'PENDING') {
+      await this.mailService.sendInvoice(
+        updatedInvoice.client.email,
+        updatedInvoice.user.profile?.company ?? updatedInvoice.user.profile?.fullName ?? updatedInvoice.user.email,
+        {
+          number: updatedInvoice.number,
+          clientName: updatedInvoice.client.name,
+          currency: 'IDR',
+          total: Number(updatedInvoice.total).toLocaleString(),
+          dueDate: updatedInvoice.dueDate.toLocaleDateString('id-ID')
+        }
+      );
+    }
+
+    return updatedInvoice;
   }
 
   private async isMyInvoice(invoiceNumber: string, userId: string) {
