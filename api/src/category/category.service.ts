@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { CreateDto, UpdateDto } from './dto/category.dto.js';
+import { CategoryCreateDto, CategoryUpdateDto } from './dto/category.dto.js';
 import { nanoid } from 'nanoid';
 import slugify from 'slugify';
 
@@ -17,7 +17,7 @@ export class CategoryService {
     });
   }
 
-  async create(userId: string, data: CreateDto) {
+  async create(userId: string, data: CategoryCreateDto) {
     const baseSlug = slugify(data.name, { lower: true, strict: true });
 
     return await this.prisma.category.create({
@@ -29,11 +29,16 @@ export class CategoryService {
     });
   }
 
-  async update(categoryId: string, userId: string, data: UpdateDto) {
+  async update(categoryId: string, userId: string, data: CategoryUpdateDto) {
     const category = await this.isMyCategory(categoryId, userId);
+    let newSlug = undefined;
+    if (data.name && data.name !== category.name) {
+      const baseSlug = slugify(data.name, { lower: true, strict: true });
+      newSlug = `${baseSlug}-${nanoid(4)}`;
+    }
     return await this.prisma.category.update({
       where: { id: category.id },
-      data: { ...data }
+      data: { ...data, ...(newSlug && { slug: newSlug }) }
     });
   }
 
