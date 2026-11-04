@@ -8,8 +8,24 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+
+  --color-primary: #0F766E;
+  --color-primary-light: #2DD4BF;
+  --color-primary-tint: #CCFBF1;
+  --color-primary-deep: #115E59;
+  --color-primary-accent-on-dark: #5EEAD4;
+
+  --color-navy: #0B1424;
+  --color-ink: #0F1B2D;
+  --color-muted: #5B6B7F;
+  --color-nav-muted: #B6C2D2;
+  --color-line: #E6EAF0;
+  --color-canvas: #F5F7FA;
+
+  --radius-card: 16px;
+  --radius-control: 12px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +38,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
