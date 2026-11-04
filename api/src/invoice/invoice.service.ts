@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { CreateDto, UpdateDto } from './dto/invoice.dto.js';
+import { InvoiceCreateDto, InvoiceUpdateDto } from './dto/invoice.dto.js';
 import { ProductService } from '../product/product.service.js';
 import { ClientService } from '../client/client.service.js';
 import { Frequency, InvoiceStatus, Prisma } from '../generated/prisma/client.js';
@@ -108,7 +108,7 @@ export class InvoiceService {
     });
   }
 
-  async create(userId: string, data: CreateDto) {
+  async create(userId: string, data: InvoiceCreateDto) {
     const {
       items, taxPercent = 0, clientId, issueDate, dueDate, status,
       notes, paymentTerms, recurringFrequency, recurringEndDate, autoSend, dueInDays
@@ -159,7 +159,7 @@ export class InvoiceService {
     });
   }
 
-  async update(invoiceNumber: string, userId: string, data: UpdateDto) {
+  async update(invoiceNumber: string, userId: string, data: InvoiceUpdateDto) {
     const invoice = await this.isMyInvoice(invoiceNumber, userId);
     if (invoice.status !== 'DRAFT') throw new BadRequestException('Only DRAFT invoices can be updated.');
 
@@ -480,7 +480,7 @@ export class InvoiceService {
               taxPercent: template.taxPercent,
               tax, subtotal, total,
               ...(template.notes && { notes: template.notes }),
-              ...(template.paymentTerms && { paymentTerms: template.notes }),
+              ...(template.paymentTerms && { paymentTerms: template.paymentTerms }),
               items: { create: itemsToCreate },
             },
             include: {

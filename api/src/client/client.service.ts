@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { CreateDto, UpdateDto } from './dto/client.dto.js';
+import { ClientCreateDto, ClientUpdateDto } from './dto/client.dto.js';
 
 @Injectable()
 export class ClientService {
@@ -20,7 +20,7 @@ export class ClientService {
     return await this.isMyClient(clientId, userId);
   }
 
-  async create(userId: string, data: CreateDto) {
+  async create(userId: string, data: ClientCreateDto) {
     const existingClient = await this.prisma.client.findUnique({
       where: { userId_email: { userId, email: data.email } }
     });
@@ -53,7 +53,7 @@ export class ClientService {
   async update(
     clientId: string,
     userId: string,
-    data: UpdateDto
+    data: ClientUpdateDto
   ) {
     const currentClient = await this.isMyClient(clientId, userId);
     if (data.email && data.email !== currentClient.email) {
