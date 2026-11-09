@@ -5,9 +5,9 @@ const HEADLINE = ["Tagih lebih cepat,", "terima lebih tenang."] as const;
 const DESCRIPTION = "Buat, kirim, dan pantau invoice dari satu tempat tanpa spreadsheet.";
 
 const FEATURES = [
-  { label: "Invoice rapi", icon: SquareText, path: "M4 4h16v16H4zM8 9h8M8 13h5" },
-  { label: "Recurring otomatis", icon: RotateCw, path: "M21 12a9 9 0 11-3-6.7M21 4v5h-5" },
-  { label: "Pantau status", icon: ChartColumn, path: "M4 20V10M10 20V4M16 20v-8M22 20H2" },
+  { label: "Invoice rapi", icon: SquareText },
+  { label: "Recurring otomatis", icon: RotateCw },
+  { label: "Pantau status", icon: ChartColumn },
 ] as const;
 
 const PREVIEW_INVOICE = {
@@ -29,7 +29,7 @@ const PREVIEW_PAYMENT = {
 export default function BrandPannel() {
   return (
     <div
-      className="flex-1 hidden flex-col max-w-[610px] bg-navy p-12 gap-8 lg:flex"
+      className="flex-1 hidden flex-col max-w-[610px] bg-navy p-12 gap-5 lg:flex"
       style={{
         backgroundImage: `
           radial-gradient(520px 420px at 85% 8%, rgba(45, 212, 191, 0.28), transparent 70%),
@@ -38,15 +38,15 @@ export default function BrandPannel() {
       }}
     >
       <Logo type="DARK" />
-      <div className="space-y-2">
-        <p className="text-[38px] font-bold leading-11 tracking-tight">
+      <div className="space-y-3 my-auto">
+        <p className="text-[34px] font-bold leading-10 tracking-tight">
           {HEADLINE[0]}
           <br />
           <span className="text-primary-accent-on-dark">{HEADLINE[1]}</span>
         </p>
-        <p className="w-4/5 text-nav-muted">{DESCRIPTION}</p>
+        <p className="text-sm w-4/5 text-nav-muted">{DESCRIPTION}</p>
       </div>
-      <div aria-hidden='true' className="w-[400px] -space-y-3">
+      <div aria-hidden='true' className="w-[400px] -space-y-3 mt-auto">
         <InvoiceCard />
         <InvoiceNotifCard />
       </div>
@@ -73,29 +73,29 @@ function Badge({ text, icon: Icon }: {
 
 function InvoiceCard() {
   return (
-    <div className="w-[400px] h-[210px] p-5 bg-white rounded-card text-ink">
+    <div className="w-[400px] min-h-[180px] p-5 bg-white rounded-card text-ink">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs text-muted">Invoice</div>
-          <div className="text[15px] font-bold">{PREVIEW_INVOICE.number}</div>
+          <div className="text-[11px] font-bold">{PREVIEW_INVOICE.number}</div>
         </div>
-        <span className="flex justify-center items-center rounded-full py-1 px-2.5 text-xs font-semibold text-warning-fg bg-warning-bg">
+        <span className="flex justify-center items-center rounded-full py-0.75 px-2 text-[10px] font-semibold text-warning-fg bg-warning-bg">
           {PREVIEW_INVOICE.status}
         </span>
       </div>
 
-      <div className="mt-2 mb-1.5 text-muted text-[13px]">{PREVIEW_INVOICE.client}</div>
+      <div className="mt-2 mb-1.5 text-muted text-xs">{PREVIEW_INVOICE.client}</div>
 
       {
         PREVIEW_INVOICE.lines.map((line, index) => (
-          <div key={index} className="text-[13px] border-t border-line py-2 flex justify-between">
+          <div key={index} className="text-xs border-t border-line py-1.25 flex justify-between">
             <span>{line.label}</span>
             <span className="tabular-nums">{line.amount}</span>
           </div>
         ))
       }
 
-      <div className="pt-2 text-base font-bold border-t border-line flex justify-between">
+      <div className="pt-2 text-[14px] font-bold border-t border-line flex justify-between">
         <span>Total</span>
         <span className="tabular-nums">{PREVIEW_INVOICE.total}</span>
       </div>
@@ -105,13 +105,13 @@ function InvoiceCard() {
 
 function InvoiceNotifCard() {
   return (
-    <div className="flex items-center justify-start gap-4 px-4 ml-7.5 w-[370px] h-[60px] bg-ink/90 rounded-card border border-white/14">
+    <div className="flex items-center justify-start gap-3 px-2.5 ml-40.5 w-[240px] h-[50px] bg-ink/90 rounded-card border border-white/14">
       <div className="bg-[#DCFCE7] w-fit rounded-full p-2">
         <Check className="text-success-fg w-4 h-4" />
       </div>
       <div className="leading-4">
-        <p className=" font-semibold text-[14px]">{PREVIEW_PAYMENT.title}</p>
-        <p className="text-nav-muted text-[13px]">{PREVIEW_PAYMENT.detail}</p>
+        <p className=" font-semibold text-[11px]">{PREVIEW_PAYMENT.title}</p>
+        <p className="text-nav-muted text-[10px]">{PREVIEW_PAYMENT.detail}</p>
       </div>
     </div>
   );
