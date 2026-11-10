@@ -1,4 +1,7 @@
+'use client';
+
 import { ChartColumn, Check, LucideIcon, RotateCw, SquareText } from "lucide-react";
+import { motion, Variants } from 'framer-motion';
 import Logo from "./Logo";
 
 const HEADLINE = ["Tagih lebih cepat,", "terima lebih tenang."] as const;
@@ -26,10 +29,32 @@ const PREVIEW_PAYMENT = {
   detail: "INV-2026-0045 · Rp 9.900.000",
 } as const;
 
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" },
+  },
+};
+
 export default function BrandPannel() {
   return (
-    <div
-      className="flex-1 hidden flex-col max-w-[610px] bg-navy p-12 gap-5 lg:flex"
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="flex-1 hidden flex-col max-w-[610px] bg-navy p-12 gap-5 lg:flex h-full min-h-screen overflow-hidden"
       style={{
         backgroundImage: `
           radial-gradient(520px 420px at 85% 8%, rgba(45, 212, 191, 0.28), transparent 70%),
@@ -37,25 +62,41 @@ export default function BrandPannel() {
         `
       }}
     >
-      <Logo type="DARK" />
-      <div className="space-y-3 my-auto">
+      <motion.div variants={itemVariants}>
+        <Logo type="DARK" />
+      </motion.div>
+      <motion.div variants={itemVariants} className="space-y-3 my-auto">
         <p className="text-[34px] font-bold leading-10 tracking-tight">
           {HEADLINE[0]}
           <br />
           <span className="text-primary-accent-on-dark">{HEADLINE[1]}</span>
         </p>
         <p className="text-sm w-4/5 text-nav-muted">{DESCRIPTION}</p>
-      </div>
+      </motion.div>
       <div aria-hidden='true' className="w-[400px] -space-y-3 mt-auto">
-        <InvoiceCard />
-        <InvoiceNotifCard />
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 40, scale: 0.96 },
+            visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: "easeOut" } }
+          }}
+        >
+          <InvoiceCard />
+        </motion.div>
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, x: 30, y: 20 },
+            visible: { opacity: 1, x: 0, y: 0, transition: { duration: 0.5, delay: 0.4, ease: "easeOut" } }
+          }}
+        >
+          <InvoiceNotifCard />
+        </motion.div>
       </div>
-      <div className="mt-auto flex gap-2">
+      <motion.div variants={itemVariants} className="mt-auto flex gap-2">
         <Badge icon={FEATURES[0].icon} text={FEATURES[0].label} />
         <Badge icon={FEATURES[1].icon} text={FEATURES[1].label} />
         <Badge icon={FEATURES[2].icon} text={FEATURES[2].label} />
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

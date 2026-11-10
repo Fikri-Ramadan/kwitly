@@ -17,7 +17,11 @@ export default function LoginPannel() {
   const [activeTab, setActiveTab] = useState<'password' | 'magiclink'>("password");
 
   return (
-    <div className="flex-1 flex flex-col justify-center text-black">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      className="flex-1 flex flex-col justify-center text-black">
       <div className="mx-auto">
         <div
           className="w-[392px] tracking-tight space-y-1 overflow-hidden min-h-[84px] relative mb-2.5"
@@ -44,7 +48,7 @@ export default function LoginPannel() {
         </div>
         <LoginTabs activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -178,7 +182,7 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
           <Button
             variant={'ghost'}
             className="text-primary font-bold px-0 hover:bg-transparent hover:text-primary hover:opacity-90"
-            onClick={() => {setActiveTab('password')}}
+            onClick={() => { setActiveTab('password'); }}
           >Masuk dengan password
           </Button>
         </div>
