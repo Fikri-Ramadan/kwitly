@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { Field, FieldDescription, FieldLabel } from "./ui/field";
 import { InputGroup, InputGroupInput } from "./ui/input-group";
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export default function RegisterPannel() {
   return (
@@ -15,17 +15,15 @@ export default function RegisterPannel() {
       className="flex-1 flex flex-col justify-center text-black">
       <div className="mx-auto">
         <div className="w-[392px] tracking-tight space-y-4 overflow-hidden min-h-[84px] relative mb-2.5">
-          <AnimatePresence mode="wait">
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: 0.18, ease: "easeInOut" }}
-              className="space-y-1">
-              <h1 className="text-[28px] font-bold">Buat akun Kwitly</h1>
-              <p className="text-[15px] text-muted leading-snug">Mulai kirim invoice profesional dalam hitungan menit.</p>
-            </motion.div>
-          </AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.18, ease: "easeInOut" }}
+            className="space-y-1">
+            <h1 className="text-[28px] font-bold">Buat akun Kwitly</h1>
+            <p className="text-[15px] text-muted leading-snug">Mulai kirim invoice profesional dalam hitungan menit.</p>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, x: -12 }}
