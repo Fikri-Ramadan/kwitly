@@ -84,7 +84,7 @@ export default function RegisterPannel() {
 
             <div className="space-y-2">
               <Button className={'w-full py-6! font-bold'}>Buat akun</Button>
-              <div className="text-center mt-2 text-muted font-medium">Sudah punya akun? <Link href={'/sign-in'} className="text-primary font-bold hover:opacity-90">Masuk</Link></div>
+              <div className="text-center mt-2 text-muted font-medium">Sudah punya akun? <Link href={'/sign-in'} className="text-primary font-bold opacity-80 hover:opacity-90">Masuk</Link></div>
             </div>
           </motion.div>
         </div>
