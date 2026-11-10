@@ -156,7 +156,7 @@ function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
           className={'w-full py-6! font-bold text-black/80'}
           onClick={() => { setActiveTab('magiclink'); }}
         >Kirim magic link ke email</Button>
-        <div className="text-center mt-2 text-muted font-medium">Belum punya akun? <Link href={''} className="text-primary font-bold hover:opacity-90">Daftar</Link></div>
+        <div className="text-center mt-2 text-muted font-medium">Belum punya akun? <Link href={'/register'} className="text-primary font-bold hover:opacity-90">Daftar</Link></div>
       </Field>
     </TabsContent>
   );
