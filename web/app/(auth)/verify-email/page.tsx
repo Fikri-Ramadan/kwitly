@@ -1,5 +1,5 @@
-import BrandPannel from "@/components/BrandPannel";
-import VerifyPannel from "@/components/VerifyPannel";
+import BrandPannel from "@/components/auth/BrandPannel";
+import VerifyPannel from "@/components/auth/VerifyPannel";
 
 export default function VerifyEmailPage() {
   return (

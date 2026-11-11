@@ -1,11 +1,11 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Field, FieldDescription, FieldLabel } from "./ui/field";
-import { InputGroup, InputGroupInput } from "./ui/input-group";
+import { Field, FieldDescription, FieldLabel } from "../ui/field";
+import { InputGroup, InputGroupInput } from "../ui/input-group";
 import { useState } from "react";
 import { AnimatePresence, motion } from 'framer-motion';
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import Link from "next/link";
 
 interface LoginTabsProps {
@@ -139,7 +139,7 @@ function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
           />
         </InputGroup>
         <FieldDescription className="text-end text-primary font-semibold">
-          <Link href={''} className="no-underline! opacity-80 hover:opacity-90">Lupa password?</Link>
+          <Link href={'/forgot-password'} className="no-underline! opacity-80 hover:opacity-90">Lupa password?</Link>
         </FieldDescription>
       </Field>
       <Field>

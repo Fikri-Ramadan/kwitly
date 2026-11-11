@@ -1,5 +1,5 @@
-import BrandPannel from "@/components/BrandPannel";
-import RegisterPannel from "@/components/RegisterPannel";
+import BrandPannel from "@/components/auth/BrandPannel";
+import RegisterPannel from "@/components/auth/RegisterPannel";
 
 export default function RegisterPage() {
   return (

@@ -1,9 +1,9 @@
 'use client';
 
 import Link from "next/link";
-import { Button } from "./ui/button";
-import { Field, FieldDescription, FieldLabel } from "./ui/field";
-import { InputGroup, InputGroupInput } from "./ui/input-group";
+import { Button } from "../ui/button";
+import { Field, FieldDescription, FieldLabel } from "../ui/field";
+import { InputGroup, InputGroupInput } from "../ui/input-group";
 import { motion } from 'framer-motion';
 
 export default function RegisterPannel() {

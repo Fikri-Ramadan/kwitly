@@ -2,7 +2,7 @@
 
 import { ChartColumn, Check, LucideIcon, RotateCw, SquareText } from "lucide-react";
 import { motion, Variants } from 'framer-motion';
-import Logo from "./Logo";
+import Logo from "../Logo";
 
 const HEADLINE = ["Tagih lebih cepat,", "terima lebih tenang."] as const;
 const DESCRIPTION = "Buat, kirim, dan pantau invoice dari satu tempat tanpa spreadsheet.";

@@ -1,5 +1,5 @@
-import BrandPannel from "@/components/BrandPannel";
-import LoginPannel from "@/components/LoginPannel";
+import BrandPannel from "@/components/auth/BrandPannel";
+import LoginPannel from "@/components/auth/LoginPannel";
 
 export default function SignInPage() {
   return (

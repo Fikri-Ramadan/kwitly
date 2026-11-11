@@ -1,9 +1,9 @@
 'use client';
 
 import { motion } from "framer-motion";
-import { Field, FieldLabel } from "./ui/field";
-import { InputGroup, InputGroupInput } from "./ui/input-group";
-import { Button } from "./ui/button";
+import { Field, FieldLabel } from "../ui/field";
+import { InputGroup, InputGroupInput } from "../ui/input-group";
+import { Button } from "../ui/button";
 import Link from "next/link";
 
 export default function ForgotPannel() {

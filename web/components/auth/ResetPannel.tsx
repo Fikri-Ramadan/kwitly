@@ -1,9 +1,9 @@
 'use client';
 
 import { motion } from "framer-motion";
-import { Button } from "./ui/button";
-import { Field, FieldDescription, FieldLabel } from "./ui/field";
-import { InputGroup, InputGroupInput } from "./ui/input-group";
+import { Button } from "../ui/button";
+import { Field, FieldDescription, FieldLabel } from "../ui/field";
+import { InputGroup, InputGroupInput } from "../ui/input-group";
 
 export default function ResetPannel() {
   return (

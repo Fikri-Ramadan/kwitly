@@ -1,5 +1,5 @@
-import BrandPannel from "@/components/BrandPannel";
-import ResetPannel from "@/components/ResetPannel";
+import BrandPannel from "@/components/auth/BrandPannel";
+import ResetPannel from "@/components/auth/ResetPannel";
 
 export default function ResetPasswordPage() {
   return (
