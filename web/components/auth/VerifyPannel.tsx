@@ -35,7 +35,7 @@ export default function VerifyPannel() {
             >
               Kirim ulang dalam {'45'} detik
             </Button>
-            <div className="mt-2 text-muted text-[13px] font-medium">Tidak ada di kotak masuk? Periksa folder spam, atau <Link href={'/register'} className="text-primary font-bold opacity-80 hover:opacity-90">ganti alamat email</Link>.</div>
+            <div className="mt-2 text-muted text-[13px] font-medium">Tidak ada di kotak masuk? Periksa folder spam, atau <Link href={'/sign-up'} className="text-primary font-bold opacity-80 hover:opacity-90">ganti alamat email</Link>.</div>
           </motion.div>
         </div>
       </div>
