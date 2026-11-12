@@ -7,6 +7,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from "../ui/button";
 import Link from "next/link";
+import Logo from "../Logo";
 
 interface LoginTabsProps {
   activeTab: 'password' | 'magiclink';
@@ -21,40 +22,42 @@ export default function LoginPannel() {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="flex-1 flex flex-col justify-center text-black">
-      <div className="mx-auto">
-        <div
-          className="w-[392px] tracking-tight space-y-1 overflow-hidden min-h-[84px] relative mb-2.5"
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: 0.18, ease: "easeInOut" }}
-              className="space-y-1"
-            >
-              <h1 className="text-[28px] font-bold">
-                {activeTab === 'password' ? 'Masuk ke Kwitly' : 'Masuk tanpa password'}
-              </h1>
-              <p className="text-[15px] text-muted leading-snug">
-                {activeTab === 'password'
-                  ? 'Selamat Datang Kembali. Kelola invoice anda.'
-                  : 'Kami kirim tautan sekali pakai ke email Anda. Tautan berlaku 15 menit.'}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-        <LoginTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+      className="flex-1 flex flex-col justify-center items-center text-black">
+      <Link href={'/'} className="lg:hidden mx-auto mb-6">
+        <Logo width={160} height={40} />
+      </Link>
+      <div
+        className="w-[392px] tracking-tight space-y-1 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0"
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.18, ease: "easeInOut" }}
+            className="space-y-1 text-center lg:text-start"
+          >
+            <h1 className="text-[28px] font-bold">
+              {activeTab === 'password' ? 'Masuk ke Kwitly' : 'Masuk tanpa password'}
+            </h1>
+            <p className="text-[15px] text-muted leading-snug">
+              {activeTab === 'password'
+                ? 'Selamat Datang Kembali. Kelola invoice anda.'
+                : 'Kami kirim tautan sekali pakai ke email Anda. Tautan berlaku 15 menit.'}
+            </p>
+          </motion.div>
+        </AnimatePresence>
       </div>
+
+      <LoginTabs activeTab={activeTab} setActiveTab={setActiveTab} />
     </motion.div>
   );
 }
 
 function LoginTabs({ activeTab, setActiveTab }: LoginTabsProps) {
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[392px]">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[392px] px-4 lg:px-0">
       <TabsList className={'w-full py-6 relative'}>
         <TabsTrigger
           className={'py-5.5 font-bold w-full relative z-10 transition-colors data-[state=active]:text-black text-muted-foreground hover:cursor-pointer'}

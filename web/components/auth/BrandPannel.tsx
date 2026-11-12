@@ -3,6 +3,7 @@
 import { ChartColumn, Check, LucideIcon, RotateCw, SquareText } from "lucide-react";
 import { motion, Variants } from 'framer-motion';
 import Logo from "../Logo";
+import Link from "next/link";
 
 const HEADLINE = ["Tagih lebih cepat,", "terima lebih tenang."] as const;
 const DESCRIPTION = "Buat, kirim, dan pantau invoice dari satu tempat tanpa spreadsheet.";
@@ -64,7 +65,9 @@ export default function BrandPannel() {
       }}
     >
       <motion.div variants={itemVariants}>
-        <Logo type="DARK" />
+        <Link href={'/'}>
+          <Logo type="DARK" />
+        </Link>
       </motion.div>
       <motion.div variants={itemVariants} className="space-y-3 my-auto">
         <p className="text-[34px] font-bold leading-10 tracking-tight">
