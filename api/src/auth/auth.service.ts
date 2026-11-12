@@ -1,4 +1,4 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service.js';
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
@@ -6,6 +6,7 @@ import { MailService } from './mail.service.js';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 export const OneTimeTokenValues = ['EMAIL_VERIFY', 'MAGIC_LINK', 'FORGOT_PASS'] as const;
 export type OneTimeType = (typeof OneTimeTokenValues)[number];
@@ -20,6 +21,8 @@ export const ACCESS_TOKEN_TTL_S = 15 * 60; // 15 Minutes
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  
   constructor(
     private config: ConfigService,
     private userService: UserService,
@@ -231,5 +234,15 @@ export class AuthService {
   private webLink(path: string, token: string) {
     const base = this.config.getOrThrow<string>('WEB_URL');
     return `${base}${path}?token=${encodeURIComponent(token)}`;
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, {
+    timeZone: 'Asia/Jakarta'
+  })
+  async cleanUpToken() {
+    const { count } = await this.prisma.authToken.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+    this.logger.log(`Total refresh tokens removed: ${count}`);
   }
 }

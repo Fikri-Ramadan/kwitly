@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 type Window = { limit: number; windowSeconds: number; };
 
@@ -11,6 +12,8 @@ export type RateLimitOptions = {
 
 @Injectable()
 export class RateLimitService {
+  private readonly logger = new Logger(RateLimitService.name);
+  
   constructor(private prisma: PrismaService) { }
 
   async consume(key: string, { limit, windowSeconds }: Window) {
@@ -36,10 +39,13 @@ export class RateLimitService {
     return { allowed: hits <= limit, retryAfter: Math.max(retryAfter, 1) };
   }
 
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, {
+    timeZone: 'Asia/Jakarta'
+  })
   async cleanUp() {
     const { count } = await this.prisma.rateLimit.deleteMany({
       where: { expiresAt: { lt: new Date() } }
     });
-    return count;
+    this.logger.log(`Total ratelimit row removed: ${count}`);
   }
 }
