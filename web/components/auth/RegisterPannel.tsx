@@ -15,7 +15,7 @@ export default function RegisterPannel() {
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="flex-1 flex flex-col justify-center items-center text-black">
       <Link href={'/'} className="lg:hidden mx-auto mb-6">
-        <Logo width={160} height={40} />
+        <Logo />
       </Link>
       <div className="w-[392px] tracking-tight space-y-4 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0">
         <motion.div

@@ -4,20 +4,17 @@ interface LogoProps {
   type?: 'LIGHT' | 'DARK';
   width?: number;
   height?: number;
-  className?: string;
 }
 
-export default function Logo({ type = 'LIGHT', width = 140, height = 51, className }: LogoProps) {
+export default function Logo({ type = 'LIGHT', width = 192, height = 64 }: LogoProps) {
   return (
-    <div className={`w-fit h-auto flex items-center ${className}`}>
-      <Image
-        src={type === 'LIGHT' ? '/kwitly-logo.svg' : '/kwitly-logo-dark.svg'}
-        alt='Kwitly Logo'
-        width={width}
-        height={height}
-        priority
-        className="object-contain"
-      />
-    </div>
+    <Image
+      src={type === 'LIGHT' ? '/kwitly-logo.svg' : '/kwitly-logo-dark.svg'}
+      alt='Kwitly Logo'
+      width={width}
+      height={height}
+      priority
+      className="h-8 w-auto object-contain"
+    />
   );
 }
