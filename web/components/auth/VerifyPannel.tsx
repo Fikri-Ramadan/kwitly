@@ -12,7 +12,7 @@ export default function VerifyPannel() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="flex-1 flex flex-col justify-center items-center text-black">
-      <div className="w-[392px] tracking-tight space-y-5 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0">
+      <div className="w-full max-w-[392px] tracking-tight space-y-5 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0">
         <div className='mx-auto w-fit flex justify-center items-center p-4 bg-primary-tint rounded-xl lg:mx-0'>
           <Mail className='text-primary w-7 h-7' />
         </div>

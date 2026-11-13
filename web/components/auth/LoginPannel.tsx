@@ -8,7 +8,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from "../ui/button";
 import Link from "next/link";
 import Logo from "../Logo";
-import Image from "next/image";
 
 interface LoginTabsProps {
   activeTab: 'password' | 'magiclink';
@@ -23,14 +22,24 @@ export default function LoginPannel() {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="flex-1 flex flex-col justify-center items-center text-black">
-      <Link href={'/'} className="lg:hidden mx-auto mb-6">
-        <Logo />
-      </Link>
-      <div
-        className="w-[392px] tracking-tight space-y-1 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0"
-      >
-        <AnimatePresence mode="wait">
+      className="flex-1 w-full flex flex-col justify-center items-center text-black">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          transition={{ duration: 0.18, ease: "easeInOut" }}
+          className="lg:hidden mx-auto mb-3"
+        >
+          <Link href={'/'}>
+            <Logo />
+          </Link>
+        </motion.div>
+
+        <div
+          className="w-full max-w-[392px] tracking-tight space-y-1 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0"
+        >
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: -8 }}
@@ -48,8 +57,8 @@ export default function LoginPannel() {
                 : 'Kami kirim tautan sekali pakai ke email Anda. Tautan berlaku 15 menit.'}
             </p>
           </motion.div>
-        </AnimatePresence>
-      </div>
+        </div>
+      </AnimatePresence>
 
       <LoginTabs activeTab={activeTab} setActiveTab={setActiveTab} />
     </motion.div>
@@ -58,7 +67,7 @@ export default function LoginPannel() {
 
 function LoginTabs({ activeTab, setActiveTab }: LoginTabsProps) {
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[392px] px-4 lg:px-0">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-[392px] px-4 lg:px-0">
       <TabsList className={'w-full py-6 relative'}>
         <TabsTrigger
           className={'py-5.5 font-bold w-full relative z-10 transition-colors data-[state=active]:text-black text-muted-foreground hover:cursor-pointer'}
@@ -181,13 +190,14 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
       </Field>
       <Field>
         <Button className={'w-full py-6! font-bold'}>Masuk</Button>
-        <div className="text-[13px] text-center mt-1 text-muted font-medium">
+        <div className="text-[12px] text-center mt-1 text-muted font-medium lg:text-sm">
           Lebih suka pakai password?{' '}
           <Button
             variant={'ghost'}
-            className="text-primary font-bold px-0 hover:bg-transparent hover:text-primary hover:opacity-90"
+            className="text-[12px] text-primary font-bold px-0 hover:bg-transparent hover:text-primary hover:opacity-90 lg:text-sm"
             onClick={() => { setActiveTab('password'); }}
-          >Masuk dengan password
+          >
+            Masuk dengan password
           </Button>
         </div>
       </Field>

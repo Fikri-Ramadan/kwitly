@@ -14,10 +14,10 @@ export default function RegisterPannel() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="flex-1 flex flex-col justify-center items-center text-black">
-      <Link href={'/'} className="lg:hidden mx-auto mb-6">
+      <Link href={'/'} className="lg:hidden mx-auto mb-3">
         <Logo />
       </Link>
-      <div className="w-[392px] tracking-tight space-y-4 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0">
+      <div className="w-full max-w-[392px] tracking-tight space-y-4 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0">
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -85,7 +85,7 @@ export default function RegisterPannel() {
 
           <div className="space-y-2">
             <Button className={'w-full py-6! font-bold'}>Buat akun</Button>
-            <div className="text-center mt-2 text-muted font-medium">Sudah punya akun? <Link href={'/sign-in'} className="text-primary font-bold opacity-80 hover:opacity-90">Masuk</Link></div>
+            <div className="text-sm text-center mt-2 text-muted font-medium">Sudah punya akun? <Link href={'/sign-in'} className="text-primary font-bold opacity-80 hover:opacity-90">Masuk</Link></div>
           </div>
         </motion.div>
       </div>

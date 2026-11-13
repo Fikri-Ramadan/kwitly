@@ -14,10 +14,10 @@ export default function ResetPannel() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="flex-1 flex flex-col justify-center items-center text-black">
-      <Link href={'/'} className="lg:hidden mx-auto mb-6">
+      <Link href={'/'} className="lg:hidden mx-auto mb-3">
         <Logo />
       </Link>
-      <div className="w-[392px] tracking-tight space-y-5 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0">
+      <div className="w-full max-w-[392px] tracking-tight space-y-5 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0">
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}

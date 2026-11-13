@@ -25,7 +25,7 @@ export default function Hero() {
         className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-primary-tint/50 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]"
       />
 
-      <div className="relative mx-auto grid w-full max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:items-center lg:gap-16">
+      <div className="relative mx-auto grid w-full max-w-6xl gap-12 px-4 py-10 sm:px-6 lg:py-16 lg:grid-cols-2 lg:items-center lg:gap-16">
         <div className="flex flex-col items-center gap-6 lg:items-start">
           <Badge
             variant="secondary"
@@ -40,7 +40,7 @@ export default function Hero() {
               Kelola invoice dalam satu tempat,{" "}
               <span className="text-primary">lebih rapi dan cepat</span>
             </h1>
-            <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-lg">
               Kwitly membantu Anda membuat, mengirim, dan memantau invoice
               pelanggan. Tidak ada lagi spreadsheet yang berantakan atau tagihan
               yang terlambat terlacak.
@@ -109,10 +109,10 @@ export default function Hero() {
                     key={stat.label}
                     className="rounded-xl border border-border bg-background p-3"
                   >
-                    <p className="text-[11px] font-medium text-muted-foreground">
+                    <p className="text-[10px] font-medium text-muted-foreground lg:text-[11px]">
                       {stat.label}
                     </p>
-                    <p className="mt-1 text-sm font-bold text-ink">{stat.value}</p>
+                    <p className="mt-1 text-[12px] font-bold text-ink lg:text-sm">{stat.value}</p>
                   </div>
                 ))}
               </div>
@@ -128,15 +128,15 @@ export default function Hero() {
                     }
                   >
                     <div className="flex flex-col">
-                      <span className="text-xs font-semibold text-ink">
+                      <span className="text-[11px] font-semibold text-ink lg:text-xs">
                         {row.id}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[11px] text-muted-foreground lg:text-xs">
                         {row.client}
                       </span>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className="text-xs font-semibold text-ink">
+                      <span className="text-[11px] font-semibold text-ink lg:text-xs">
                         {row.amount}
                       </span>
                       <Badge

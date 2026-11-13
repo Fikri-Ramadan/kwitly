@@ -6,7 +6,7 @@ interface LogoProps {
   height?: number;
 }
 
-export default function Logo({ type = 'LIGHT', width = 192, height = 64 }: LogoProps) {
+export default function Logo({ type = 'LIGHT', width = 96, height = 32 }: LogoProps) {
   return (
     <Image
       src={type === 'LIGHT' ? '/kwitly-logo.svg' : '/kwitly-logo-dark.svg'}
@@ -14,7 +14,7 @@ export default function Logo({ type = 'LIGHT', width = 192, height = 64 }: LogoP
       width={width}
       height={height}
       priority
-      className="h-8 w-auto object-contain"
+      className="object-contain"
     />
   );
 }
