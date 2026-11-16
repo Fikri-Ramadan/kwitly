@@ -104,6 +104,7 @@ export class AuthController {
     return { message: 'Password successfully changed. Please log in.' };
   }
 
+  @RateLimit({ scope: 'refresh', ip: { limit: 240, windowSeconds: 15 * MIN } })
   @Post('refresh')
   @ApiOperation({ summary: 'Refresh Token', description: 'Obtaining a new access token using a refresh token.' })
   @ApiResponse({ status: 200, type: TokenResponseDto })

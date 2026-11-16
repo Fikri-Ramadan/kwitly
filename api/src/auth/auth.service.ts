@@ -18,11 +18,12 @@ const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000; // 15 Minutes
 const FORGOT_PASS_TTL_MS = 60 * 60 * 1000; // 60 Minutes
 export const ACCESS_TOKEN_TTL_S = 15 * 60; // 15 Minutes
+const REFRESH_GRACE_MS = 10000; // 10 Seconds
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  
+
   constructor(
     private config: ConfigService,
     private userService: UserService,
@@ -105,25 +106,42 @@ export class AuthService {
 
   async refresh(raw: string) {
     const invalid = new UnauthorizedException('The session has ended. Please log in again.');
+    const now = new Date();
 
     const record = await this.prisma.authToken.findUnique({
       where: { tokenHash: this.sha256(raw) },
       include: { user: true }
     });
 
-    if (!record || record.type !== 'REFRESH' || record.expiresAt < new Date())
+    if (!record || record.type !== 'REFRESH' || record.expiresAt < now || record.revokedAt)
       throw invalid;
 
-    if (record.usedAt) {
+    let usedAt = record.usedAt;
+
+    if (!usedAt) {
+      const { count } = await this.prisma.authToken.updateMany({
+        where: { id: record.id, usedAt: null, revokedAt: null },
+        data: { usedAt: now }
+      });
+
+      if (count === 1)
+        return await this.issueSession(record.user, record.familyId ?? undefined);
+
+      const latest = await this.prisma.authToken.findUnique({
+        where: { id: record.id },
+        select: { usedAt: true, revokedAt: true },
+      });
+
+      if (!latest || latest.revokedAt)
+        throw invalid;
+
+      usedAt = latest.usedAt;
+    }
+
+    if (!usedAt || now.getTime() - usedAt.getTime() > REFRESH_GRACE_MS) {
       if (record.familyId) await this.revokeFamily(record.familyId);
       throw invalid;
     }
-
-    const { count } = await this.prisma.authToken.updateMany({
-      where: { id: record.id, usedAt: null },
-      data: { usedAt: new Date() }
-    });
-    if (count !== 1) throw invalid;
 
     return await this.issueSession(record.user, record.familyId ?? undefined);
   }
@@ -133,7 +151,7 @@ export class AuthService {
       where: { tokenHash: this.sha256(raw) }
     });
     if (record?.type === 'REFRESH' && record.familyId)
-      this.revokeFamily(record.familyId);
+      await this.revokeFamily(record.familyId);
   }
 
   async requestResetPassword(email: string) {
@@ -157,9 +175,12 @@ export class AuthService {
           type: { in: ['FORGOT_PASS', 'REFRESH', 'MAGIC_LINK'] }
         },
         data: { usedAt: new Date() }
-      })
+      }),
+      this.prisma.authToken.updateMany({
+        where: { userId, type: 'REFRESH', revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
     ]);
-    await this.userService.updatePassword(userId, hashedPassword);
   }
 
   private async issueSession(
@@ -222,8 +243,8 @@ export class AuthService {
 
   private async revokeFamily(familyId: string) {
     await this.prisma.authToken.updateMany({
-      where: { familyId, usedAt: null },
-      data: { usedAt: new Date() }
+      where: { familyId, revokedAt: null },
+      data: { revokedAt: new Date() }
     });
   }
 
