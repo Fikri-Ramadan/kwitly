@@ -32,13 +32,6 @@ export class AuthService {
     private mailService: MailService
   ) { }
 
-  async validateUser(email: string, pass: string) {
-    const user = await this.userService.findByEmail(email);
-    if (pass !== user.password) throw new HttpException('Incorrect password', HttpStatus.BAD_REQUEST);
-    const { password, ...result } = user;
-    return result;
-  }
-
   async requestMagicLink(email: string) {
     const user = await this.userService.upsert(email);
     await this.invalidateTokens(user.id, 'MAGIC_LINK');
