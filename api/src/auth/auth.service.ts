@@ -50,13 +50,11 @@ export class AuthService {
   }
 
   async register(data: RegisterDto) {
-    const record = await this.userService.create(
+    await this.userService.create(
       data.email,
       await bcrypt.hash(data.password, BCRYPT_ROUNDS),
       data.name, data.company
     );
-    const token = await this.createToken(record.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
-    await this.mailService.sendVerification(record.email, this.webLink('/verify-email', token));
   }
 
   async resendMail(type: OneTimeType, email: string) {

@@ -28,7 +28,7 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'The email is already registered.' })
   async register(@Body() registerDto: RegisterDto) {
     await this.authService.register({...registerDto});
-    return { message: 'Registration successfully. Check email for verify account.' };
+    return { message: 'Registration successfully.' };
   }
 
   @RateLimit({ scope: 'verify-email', ip: { limit: 20, windowSeconds: 15 * MIN } })
@@ -128,6 +128,6 @@ export class AuthController {
   @ApiOperation({ summary: 'Resend Email', description: 'Resend the verification email, magic link or forgot password.' })
   async sendMail(@Body() { type, email }: SendMailDto) {
     await this.authService.resendMail(type, email);
-    return { message: 'The link has been sent successfully. Please check your email.' };
+    return { message: 'The link has been sent successfully. Please check your email.', seconds: MIN };
   }
 }
