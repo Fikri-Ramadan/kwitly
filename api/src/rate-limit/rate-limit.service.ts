@@ -2,12 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
-type Window = { limit: number; windowSeconds: number; };
+export type Window = { limit: number; windowSeconds: number };
 
 export type RateLimitOptions = {
   scope: string;
-  ip?: Window;
-  email?: Window;
+  ip?: Window | Window[];
+  email?: Window | Window[];
 };
 
 @Injectable()

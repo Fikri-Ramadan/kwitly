@@ -7,6 +7,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { RegisterDto } from './dto/auth.dto.js';
 
 export const OneTimeTokenValues = ['EMAIL_VERIFY', 'MAGIC_LINK', 'FORGOT_PASS'] as const;
 export type OneTimeType = (typeof OneTimeTokenValues)[number];
@@ -48,10 +49,11 @@ export class AuthService {
     return await this.issueSession(user);
   }
 
-  async register(email: string, password: string) {
+  async register(data: RegisterDto) {
     const record = await this.userService.create(
-      email,
-      await bcrypt.hash(password, BCRYPT_ROUNDS),
+      data.email,
+      await bcrypt.hash(data.password, BCRYPT_ROUNDS),
+      data.name, data.company
     );
     const token = await this.createToken(record.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
     await this.mailService.sendVerification(record.email, this.webLink('/verify-email', token));

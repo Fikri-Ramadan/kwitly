@@ -7,6 +7,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 const MIN = 60;
 const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
 
 @ApiTags('Authentication')
 @Public()
@@ -26,7 +27,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Registration successful; please check your email.' })
   @ApiResponse({ status: 409, description: 'The email is already registered.' })
   async register(@Body() registerDto: RegisterDto) {
-    await this.authService.register(registerDto.email, registerDto.password);
+    await this.authService.register({...registerDto});
     return { message: 'Registration successfully. Check email for verify account.' };
   }
 
@@ -113,10 +114,16 @@ export class AuthController {
   }
 
   @RateLimit({
-    scope: 'send-email',
-    ip: { limit: 1, windowSeconds: MIN },
-    email: { limit: 1, windowSeconds: MIN },
-  })
+  scope: 'send-email',
+  ip: [
+    { limit: 1, windowSeconds: MIN },
+    { limit: 50, windowSeconds: DAY },
+  ],
+  email: [
+    { limit: 1, windowSeconds: MIN },
+    { limit: 15, windowSeconds: DAY },
+  ],
+})
   @Post('send-mail')
   @ApiOperation({ summary: 'Resend Email', description: 'Resend the verification email, magic link or forgot password.' })
   async sendMail(@Body() { type, email }: SendMailDto) {

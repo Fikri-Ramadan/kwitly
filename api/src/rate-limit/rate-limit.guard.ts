@@ -20,6 +20,9 @@ const safeEqual = (a: string, b: string) => {
   return x.length === y.length && timingSafeEqual(x, y);
 };
 
+const toArray = <T>(v?: T | T[]): T[] =>
+  v === undefined ? [] : Array.isArray(v) ? v : [v];
+
 function bucketIp(raw: string) {
   const ip = raw.split('%')[0].trim().toLowerCase();
   if (isIPv4(ip)) return ip;
@@ -74,33 +77,48 @@ export class RateLimitGuard implements CanActivate {
   async canActivate(ctx: ExecutionContext) {
     const options = this.reflector.getAllAndOverride<RateLimitOptions | undefined>(
       RATE_LIMIT_KEY,
-      [ctx.getHandler(), ctx.getClass()]
+      [ctx.getHandler(), ctx.getClass()],
     );
     if (!options) return true;
 
     const http = ctx.switchToHttp();
     const req = http.getRequest<RequestLike>();
 
-    if (options.ip) {
-      const r = await this.limiter.consume(
-        `${options.scope}:ip:${clientIp(req, this.internalSecret)}`, options.ip);
+    const ip = clientIp(req, this.internalSecret);
+    const rawEmail = req.body?.email;
+    const email =
+      typeof rawEmail === 'string'
+        ? rawEmail.trim().toLowerCase().slice(0, 254)
+        : undefined;
+
+    const checks = [
+      ...toArray(options.ip).map((w) => ({
+        key: `${options.scope}:ip:${ip}:${w.windowSeconds}`,
+        w,
+      })),
+      ...(email
+        ? toArray(options.email).map((w) => ({
+          key: `${options.scope}:email:${email}:${w.windowSeconds}`,
+          w,
+        }))
+        : []),
+    ].sort((a, b) => a.w.windowSeconds - b.w.windowSeconds); // window pendek dulu
+
+    for (const { key, w } of checks) {
+      const r = await this.limiter.consume(key, w);
       if (!r.allowed) this.reject(http.getResponse<ResponseLike>(), r.retryAfter);
     }
-
-    const email = req.body?.email;
-    if (options.email && typeof email === 'string') {
-      const normalized = email.trim().toLowerCase().slice(0, 254);
-      const r = await this.limiter.consume(`${options.scope}:email:${normalized}`, options.email);
-      if (!r.allowed) this.reject(http.getResponse<ResponseLike>(), r.retryAfter);
-    }
-
     return true;
   }
 
-  private reject(res: ResponseLike, retryAfter: number): never {
-    res.setHeader('Retry-After', String(retryAfter));
+  private reject(res: ResponseLike, seconds: number): never {
+    res.setHeader('Retry-After', String(seconds));
     throw new HttpException(
-      `Too many attempts. Try again in ${retryAfter} seconds.`,
+      {
+        statusCode: HttpStatus.TOO_MANY_REQUESTS,
+        message: `Too many attempts. Try again in ${seconds} seconds.`,
+        seconds,
+      },
       HttpStatus.TOO_MANY_REQUESTS,
     );
   }
