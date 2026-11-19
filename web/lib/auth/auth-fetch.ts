@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 
 export type ApiResult<T> =
   | { ok: true; data: T; }
-  | { ok: false; status: number; message: string; };
+  | { ok: false; status: number; message: string; seconds?: number; };
 
 export async function authFetch<T>(path: string, body: unknown): Promise<ApiResult<T>> {
   try {
@@ -18,10 +18,10 @@ export async function authFetch<T>(path: string, body: unknown): Promise<ApiResu
     const json = await res.json().catch(() => null);
     if (!res.ok) {
       const m = json?.message;
-      return { ok: false, status: res.status, message: Array.isArray(m) ? m[0] : (m ?? `Something wen't wrong.`) };
+      return { ok: false, status: res.status, seconds: json?.seconds, message: Array.isArray(m) ? m[0] : (m ?? `Something wen't wrong.`) };
     }
     return { ok: true, data: json as T };
   } catch (error) {
-    return { ok: false, status: 0, message: 'Unable connect to server' };
+    return { ok: false, status: 0, message: 'Server sedang mengalami gangguan. Silakan coba lagi sebentar lagi.' };
   }
 }
