@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/toast";
 
 const geist = Geist({
   subsets: ['latin'],
@@ -27,7 +28,10 @@ export default function RootLayout({ children }: Readonly<{
       lang="en"
       className={cn("h-full antialiased", jakarta.variable, "font-sans", geist.variable)}
     >
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

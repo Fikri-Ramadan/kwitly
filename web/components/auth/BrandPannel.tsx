@@ -56,7 +56,7 @@ export default function BrandPannel() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="flex-1 hidden flex-col max-w-[610px] bg-navy text-white p-12 gap-5 lg:flex h-full min-h-screen overflow-hidden"
+      className="w-full shrink-0 hidden flex-col max-w-[610px] bg-navy text-white p-12 gap-5 lg:flex min-h-screen overflow-hidden"
       style={{
         backgroundImage: `
           radial-gradient(520px 420px at 85% 8%, rgba(45, 212, 191, 0.28), transparent 70%),
