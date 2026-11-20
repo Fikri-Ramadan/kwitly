@@ -36,7 +36,7 @@ export default function RegisterPannel({ initialValues }: RegisterPannelProps) {
       type: 'loading',
     });
 
-    const result = await signUp(state, formData);
+    const result = await signUp(formData);
     setState(result);
     setIsPending(false);
 
