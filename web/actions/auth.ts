@@ -2,7 +2,7 @@
 
 import { authFetch } from "@/lib/auth/auth-fetch";
 import { setVerifEmail } from "@/lib/auth/verifEmail";
-import { FormState, SignupFormSchema } from "@/lib/definitions";
+import { ForgotPasswordSchema, FormState, SignupFormSchema } from "@/lib/definitions";
 import z from "zod";
 
 export type ResendResult = {
@@ -55,7 +55,7 @@ export async function signUp(state: FormState, formData: FormData): Promise<Form
   }
 
   await setVerifEmail({ ...rawData });
-  return { success: true, message: 'Pendaftaran berhasil. Cek email kamu untuk verifikasi (berlaku 24 jam).' };
+  return { success: true, message: 'Pendaftaran berhasil.' };
 }
 
 export async function resendVerificationMail(email: string): Promise<ResendResult> {
@@ -68,6 +68,30 @@ export async function resendVerificationMail(email: string): Promise<ResendResul
     if (res.status === 429) return { success: false, seconds: res.seconds, message: TOO_MANY };
     return { success: false, message: res.message };
   }
-  console.log(res);
+
   return { success: true, seconds: res.data.seconds, message: 'Link berhasil terkirim. Cek email kamu untuk verifikasi (berlaku 24 jam).' };
+}
+
+export async function forgotPassword(formData: FormData): Promise<FormState> {
+  const email = formData.get('email') as string;
+
+  const validatedFields = ForgotPasswordSchema.safeParse({ email });
+
+  if (!validatedFields.success) {
+    return {
+      inputs: { email },
+      errors: z.flattenError(validatedFields.error).fieldErrors,
+    };
+  }
+
+  const res = await authFetch('/auth/forgot-password', {
+    email
+  });
+
+  if (!res.ok) {
+    if (res.status === 429) return { success: false, seconds: res.seconds, message: TOO_MANY };
+    return { success: false, message: res.message };
+  }
+
+  return { success: true, message: 'Link berhasil terkirim' };
 }

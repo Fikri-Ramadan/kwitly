@@ -1,5 +1,27 @@
 import * as z from 'zod';
 
+export type FormState =
+  | {
+    inputs?: {
+      name?: string;
+      company?: string;
+      email?: string;
+      password?: string;
+    };
+    errors?: {
+      name?: string[];
+      company?: string[];
+      email?: string[];
+      password?: string[];
+      confirmPassword?: string[];
+      message?: string;
+    };
+    message?: string;
+    success?: boolean;
+    seconds?: number;
+  }
+  | undefined;
+
 export const SignupFormSchema = z
   .object({
     name: z
@@ -23,23 +45,7 @@ export const SignupFormSchema = z
     path: ['confirmPassword'],
   });
 
-export type FormState =
-  | {
-    inputs?: {
-      name?: string;
-      company?: string;
-      email?: string;
-      password?: string;
-    };
-    errors?: {
-      name?: string[];
-      company?: string[];
-      email?: string[];
-      password?: string[];
-      confirmPassword?: string[];
-      message?: string;
-    };
-    message?: string;
-    success?: boolean;
-  }
-  | undefined;
+export const ForgotPasswordSchema = z
+  .object({
+    email: z.email({ error: 'Tolong masukan email yang valid.' }).trim(),
+  });

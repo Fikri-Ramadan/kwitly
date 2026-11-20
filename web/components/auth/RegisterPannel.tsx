@@ -6,7 +6,7 @@ import { Field, FieldDescription, FieldLabel } from "../ui/field";
 import { InputGroup, InputGroupInput } from "../ui/input-group";
 import { motion } from 'framer-motion';
 import Logo from "../Logo";
-import { SubmitEvent, useActionState, useEffect, useState } from "react";
+import { SubmitEvent, useState } from "react";
 import { signUp } from "@/actions/auth";
 import { toast } from "../ui/toast";
 import { useRouter } from "next/navigation";
@@ -21,12 +21,10 @@ interface RegisterPannelProps {
 
 export default function RegisterPannel({ initialValues }: RegisterPannelProps) {
   const router = useRouter();
-
-  // const [state, formAction, isPending] = useActionState(signUp, undefined);
   const [state, setState] = useState<FormState>(undefined);
   const [isPending, setIsPending] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
@@ -57,7 +55,7 @@ export default function RegisterPannel({ initialValues }: RegisterPannelProps) {
     }
 
     toast.update(toastId, {
-      title: result.message || 'Akun berhasil dibuat.',
+      title: result.message || 'Akun berhasil dibuat',
       description: 'Beralihkan ke halaman verifikasi email...',
       type: 'success',
     });
@@ -93,7 +91,6 @@ export default function RegisterPannel({ initialValues }: RegisterPannelProps) {
         >
 
           <form
-            // action={formAction}
             onSubmit={handleSubmit}
             className="space-y-4">
             {state?.errors && (

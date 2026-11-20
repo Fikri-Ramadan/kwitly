@@ -151,7 +151,7 @@ export class AuthService {
     const user = await this.userService.findByEmail(email);
     await this.invalidateTokens(user.id, 'FORGOT_PASS');
     const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
-    await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', token));
+    await this.mailService.sendForgotLink(user.email, this.webLink('/reset-password', token));
   }
 
   async resetPassword(token: string, password: string) {
