@@ -61,6 +61,9 @@ export class AuthService {
     const user = await this.userService.findByEmail(email);
     switch (type) {
       case 'EMAIL_VERIFY': {
+        if (user.emailVerified) {
+          return { alreadyVerified: true, };
+        }
         await this.invalidateTokens(user.id, 'EMAIL_VERIFY');
         const token = await this.createToken(user.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
         await this.mailService.sendVerification(email, this.webLink('/verify-email', token));

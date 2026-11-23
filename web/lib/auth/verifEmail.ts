@@ -15,6 +15,11 @@ export async function setVerifEmail(payload: Record<string, unknown>) {
   jar.set(VE, encryptedData, { ...cookieBase, maxAge: VE_MAX_AGE });
 }
 
+export async function deleteVerifEmail() {
+  const jar = await cookies();
+  jar.delete(VE);
+}
+
 export const getVerifEmail = cache(async (): Promise<VerifEmail | null> => {
   const emailCookie = (await cookies()).get(VE)?.value;
   const decryptedEmailCookie = await decryptCookie(emailCookie) as VerifEmail;

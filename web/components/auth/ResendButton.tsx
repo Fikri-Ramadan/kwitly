@@ -4,13 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { resendVerificationMail } from '@/actions/auth';
 import { toast } from '../ui/toast';
+import { useRouter } from 'next/navigation';
 
-const DAILY_THRESHOLD = 60; // seconds di atas ini = limit harian
+const DAILY_THRESHOLD = 60;
 
-export default function ResendButton({ email }: { email: string }) {
+export default function ResendButton({ email }: { email: string; }) {
+  const router = useRouter();
   const [seconds, setSeconds] = useState(0);
   const [dailyLimited, setDailyLimited] = useState(false);
-  const [sending, setSending] = useState(true); // true karena auto-send saat mount
+  const [sending, setSending] = useState(true);
   const didAutoSend = useRef(false);
 
   const send = useCallback(
@@ -20,13 +22,21 @@ export default function ResendButton({ email }: { email: string }) {
       const res = await resendVerificationMail(email);
       setSending(false);
 
-      // sukses (60) atau 429: selalu sinkronkan cooldown dari backend
+      if (res.alreadyVerified) {
+        toast.add({
+          title: res.message,
+          description: 'Beralih ke halaman login...',
+          type: 'success',
+        });
+
+        return router.push('/sign-in')
+      }
+
       if (res.seconds !== undefined) {
         if (res.seconds > DAILY_THRESHOLD) setDailyLimited(true);
         else setSeconds(res.seconds);
       }
 
-      // auto-send: diam saja kalau sukses atau kena rate limit
       const rateLimited = !res.success && res.seconds !== undefined;
       if (auto && (res.success || rateLimited)) return;
 
@@ -38,7 +48,6 @@ export default function ResendButton({ email }: { email: string }) {
     [email, toast],
   );
 
-  // kirim otomatis sekali saat halaman dibuka
   useEffect(() => {
     if (didAutoSend.current) return;
     didAutoSend.current = true;

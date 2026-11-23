@@ -1,7 +1,7 @@
 'use server';
 
 import { authFetch } from "@/lib/auth/auth-fetch";
-import { setVerifEmail } from "@/lib/auth/verifEmail";
+import { deleteVerifEmail, setVerifEmail } from "@/lib/auth/verifEmail";
 import { forgotPasswordSchema, FormState, resetPasswordSchema, signupFormSchema } from "@/lib/definitions";
 import z from "zod";
 
@@ -9,6 +9,7 @@ export type ResendResult = {
   success: boolean;
   message: string;
   seconds?: number;
+  alreadyVerified?: boolean;
 };
 
 const TOO_MANY = 'Terlalu banyak percobaan. Coba lagi beberapa saat lagi.';
@@ -108,7 +109,7 @@ export async function resetPassword(formData: FormData, token: string): Promise<
 }
 
 export async function resendVerificationMail(email: string): Promise<ResendResult> {
-  const res = await authFetch<{ seconds: number; }>('/auth/send-mail', {
+  const res = await authFetch<{ seconds: number; alreadyVerified: boolean; }>('/auth/send-mail', {
     type: "EMAIL_VERIFY",
     email
   });
@@ -118,5 +119,23 @@ export async function resendVerificationMail(email: string): Promise<ResendResul
     return { success: false, message: res.message };
   }
 
+  if (res.data?.alreadyVerified) {
+    await deleteVerifEmail();
+    return { success: true, alreadyVerified: true, message: 'Email sudah terverifikasi' };
+  }
+
   return { success: true, seconds: res.data.seconds, message: 'Link berhasil terkirim. Cek email kamu untuk verifikasi (berlaku 24 jam).' };
+}
+
+export async function verifyEmail(token: string): Promise<FormState> {
+  const res = await authFetch<{ seconds: number; }>('/auth/verify-email', {
+    token
+  });
+
+  if (!res.ok) {
+    if (res.status === 429) return { success: false, seconds: res.seconds, message: TOO_MANY };
+    return { success: false, message: res.message };
+  }
+
+  return { success: true, message: 'Verifikasi email berhasil' };
 }

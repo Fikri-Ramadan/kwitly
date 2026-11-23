@@ -7,13 +7,14 @@ const publicRoutes = ['/sign-up', '/sign-in', '/verify-email', '/'];
 
 export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
+  const hasVerifyToken = req.nextUrl.searchParams.has('token');
   const isProtectedRoute = protectedRoutes.includes(path);
   const isPublicRoute = publicRoutes.includes(path);
 
   const verifEmail = (await cookies()).get(VE)?.value;
   const decryptedVerifEmail = (await decryptCookie(verifEmail))?.email;
 
-  if (path.startsWith('/verify-email') && !decryptedVerifEmail) {
+  if (path.startsWith('/verify-email') && !decryptedVerifEmail && !hasVerifyToken) {
     return NextResponse.redirect(new URL('/sign-up', req.nextUrl));
   }
 

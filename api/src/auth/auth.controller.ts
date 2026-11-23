@@ -27,7 +27,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Registration successful; please check your email.' })
   @ApiResponse({ status: 409, description: 'The email is already registered.' })
   async register(@Body() registerDto: RegisterDto) {
-    await this.authService.register({...registerDto});
+    await this.authService.register({ ...registerDto });
     return { message: 'Registration successfully.' };
   }
 
@@ -114,20 +114,23 @@ export class AuthController {
   }
 
   @RateLimit({
-  scope: 'send-email',
-  ip: [
-    { limit: 1, windowSeconds: MIN },
-    { limit: 50, windowSeconds: DAY },
-  ],
-  email: [
-    { limit: 1, windowSeconds: MIN },
-    { limit: 15, windowSeconds: DAY },
-  ],
-})
+    scope: 'send-email',
+    ip: [
+      { limit: 1, windowSeconds: MIN },
+      { limit: 50, windowSeconds: DAY },
+    ],
+    email: [
+      { limit: 1, windowSeconds: MIN },
+      { limit: 15, windowSeconds: DAY },
+    ],
+  })
   @Post('send-mail')
   @ApiOperation({ summary: 'Resend Email', description: 'Resend the verification email, magic link or forgot password.' })
   async sendMail(@Body() { type, email }: SendMailDto) {
-    await this.authService.resendMail(type, email);
-    return { message: 'The link has been sent successfully. Please check your email.', seconds: MIN };
+    const result = await this.authService.resendMail(type, email);
+    if (result?.alreadyVerified) {
+      return { message: 'Email already verified.', alreadyVerified: result.alreadyVerified };
+    }
+    return { message: 'The link has been sent successfully. Please check your email.', alreadyVerified: result?.alreadyVerified, seconds: MIN };
   }
 }
