@@ -108,6 +108,19 @@ export async function resetPassword(formData: FormData, token: string): Promise<
   return { success: true, message: 'Kata sandi berhasil diubah' };
 }
 
+export async function verifyEmail(token: string): Promise<FormState> {
+  const res = await authFetch<{ seconds: number; }>('/auth/verify-email', {
+    token
+  });
+
+  if (!res.ok) {
+    if (res.status === 429) return { success: false, seconds: res.seconds, message: TOO_MANY };
+    return { success: false, message: res.message };
+  }
+
+  return { success: true, message: 'Verifikasi email berhasil' };
+}
+
 export async function resendVerificationMail(email: string): Promise<ResendResult> {
   const res = await authFetch<{ seconds: number; alreadyVerified: boolean; }>('/auth/send-mail', {
     type: "EMAIL_VERIFY",
@@ -127,9 +140,20 @@ export async function resendVerificationMail(email: string): Promise<ResendResul
   return { success: true, seconds: res.data.seconds, message: 'Link berhasil terkirim. Cek email kamu untuk verifikasi (berlaku 24 jam).' };
 }
 
-export async function verifyEmail(token: string): Promise<FormState> {
-  const res = await authFetch<{ seconds: number; }>('/auth/verify-email', {
-    token
+export async function requestMagicLink(formData: FormData): Promise<FormState> {
+  const email = formData.get('email') as string;
+
+  const validatedFields = forgotPasswordSchema.safeParse({ email });
+
+  if (!validatedFields.success) {
+    return {
+      inputs: { email },
+      errors: z.flattenError(validatedFields.error).fieldErrors,
+    };
+  }
+
+  const res = await authFetch('/auth/magic-link', {
+    email
   });
 
   if (!res.ok) {
@@ -137,5 +161,5 @@ export async function verifyEmail(token: string): Promise<FormState> {
     return { success: false, message: res.message };
   }
 
-  return { success: true, message: 'Verifikasi email berhasil' };
+  return { success: true, message: 'Link berhasil terkirim ke email' };
 }

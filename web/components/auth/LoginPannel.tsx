@@ -3,11 +3,14 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Field, FieldDescription, FieldLabel } from "../ui/field";
 import { InputGroup, InputGroupInput } from "../ui/input-group";
-import { useState } from "react";
+import { SubmitEvent, useState } from "react";
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from "../ui/button";
 import Link from "next/link";
 import Logo from "../Logo";
+import { FormState } from "@/lib/definitions";
+import { toast } from "../ui/toast";
+import { requestMagicLink } from "@/actions/auth";
 
 interface LoginTabsProps {
   activeTab: 'password' | 'magiclink';
@@ -176,31 +179,85 @@ function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
 }
 
 function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
+  const [state, setState] = useState<FormState>(undefined);
+  const [isPending, setIsPending] = useState(false);
+
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    setIsPending(true);
+    const toastId = toast.add({
+      title: 'Mengirim link ke email...',
+      description: 'Mohon tunggu sebentar.',
+      type: 'loading',
+    });
+
+    const result = await requestMagicLink(formData);
+    setState(result);
+    setIsPending(false);
+
+    if (!result?.success) {
+      toast.update(toastId, {
+        title: 'Pengiriman link ke email gagal',
+        description: result?.message || 'Terjadi kesalahan pada server.',
+        type: 'error',
+      });
+      return;
+    }
+
+    toast.update(toastId, {
+      title: result.message || 'Link berhasil terkirim ke email',
+      description: 'tautan tersebut hanya berlaku 15 menit.',
+      type: 'success',
+    });
+
+    form.reset();
+    setState(undefined);
+  };
+
   return (
-    <TabsContent value="magiclink" className={'space-y-4'}>
-      <Field className="max-w-full">
-        <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Email</FieldLabel>
-        <InputGroup className="py-5 border-2 border-line">
-          <InputGroupInput
-            id="inline-end-input"
-            type="email"
-            placeholder="nama@perusahaan.com"
-          />
-        </InputGroup>
-      </Field>
-      <Field>
-        <Button className={'w-full py-6! font-bold'}>Masuk</Button>
-        <div className="text-[12px] text-center mt-1 text-muted font-medium lg:text-sm">
-          Lebih suka pakai password?{' '}
-          <Button
-            variant={'ghost'}
-            className="text-[12px] text-primary font-bold px-0 hover:bg-transparent hover:text-primary hover:opacity-90 lg:text-sm"
-            onClick={() => { setActiveTab('password'); }}
-          >
-            Masuk dengan password
-          </Button>
-        </div>
-      </Field>
+    <TabsContent value="magiclink">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {state?.errors && (
+          <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+            <ul className="list-disc pl-4 space-y-1">
+              {Object.values(state.errors)
+                .flat()
+                .map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+            </ul>
+          </div>
+        )}
+        <Field className="max-w-full">
+          <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Email</FieldLabel>
+          <InputGroup className="py-5 border-2 border-line">
+            <InputGroupInput
+              id="inline-end-input"
+              name="email"
+              type="email"
+              placeholder="nama@perusahaan.com"
+              defaultValue={state?.inputs?.email ?? ''}
+              disabled={isPending}
+            />
+          </InputGroup>
+        </Field>
+        <Field>
+          <Button type="submit" className={`w-full py-6! font-bold ${isPending ? 'animate-pulse' : ''}`} disabled={isPending}>Masuk</Button>
+          <div className="text-[12px] text-center mt-1 text-muted font-medium lg:text-sm">
+            Lebih suka pakai password?{' '}
+            <Button
+              variant={'ghost'}
+              className='text-[12px] text-primary font-bold px-0 hover:bg-transparent hover:text-primary hover:opacity-90 lg:text-sm'
+              onClick={() => { setActiveTab('password'); }}
+            >
+              Masuk dengan password
+            </Button>
+          </div>
+        </Field>
+      </form>
     </TabsContent>
   );
 }
