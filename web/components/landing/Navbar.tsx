@@ -8,7 +8,6 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -17,9 +16,9 @@ import { cn } from "@/lib/utils";
 import Logo from "@/components/Logo";
 
 const NAV_LINKS = [
-  { label: "Fitur", href: "#fitur" },
-  { label: "Cara Kerja", href: "#cara-kerja" },
-  { label: "FAQ", href: "#faq" },
+  { label: "Fitur", href: "/#fitur" },
+  { label: "Cara Kerja", href: "/#cara-kerja" },
+  { label: "FAQ", href: "/#faq" },
 ];
 
 export default function Navbar() {
@@ -99,12 +98,14 @@ export default function Navbar() {
                     buttonVariants({ variant: "outline", size: "lg" }),
                     "h-9 w-full"
                   )}
+                  onClick={() => setMenuOpen(false)}
                 >
                   Masuk
                 </Link>
                 <Link
                   href="/sign-up"
                   className={cn(buttonVariants({ size: "lg" }), "h-9 w-full")}
+                  onClick={() => setMenuOpen(false)}
                 >
                   Daftar
                 </Link>

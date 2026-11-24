@@ -27,19 +27,6 @@ export default function LoginPannel() {
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="flex-1 w-full flex flex-col justify-center items-center text-black">
       <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 8 }}
-          transition={{ duration: 0.18, ease: "easeInOut" }}
-          className="lg:hidden mx-auto mb-3"
-        >
-          <Link href={'/'}>
-            <Logo />
-          </Link>
-        </motion.div>
-
         <div
           className="w-full max-w-[392px] tracking-tight space-y-1 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0"
         >
