@@ -5,7 +5,7 @@ import { ProductService } from '../product/product.service.js';
 import { ClientService } from '../client/client.service.js';
 import { Frequency, InvoiceStatus, Prisma } from '../generated/prisma/client.js';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { MailService } from '../auth/mail.service.js';
+import { MailService } from '../mail/mail.service.js';
 
 const ALLOWED_TRANSITION: Record<InvoiceStatus, InvoiceStatus[]> = {
   DRAFT: ['PENDING', 'CANCELLED'],

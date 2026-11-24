@@ -1,8 +1,8 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service.js';
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import { MailService } from './mail.service.js';
+import { MailService } from '../mail/mail.service.js';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ConfigService } from '@nestjs/config';
