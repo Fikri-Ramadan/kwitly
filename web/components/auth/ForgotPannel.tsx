@@ -88,7 +88,7 @@ export default function ForgotPannel() {
 
             <Field className="max-w-full">
               <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Email</FieldLabel>
-              <InputGroup className="py-5 border-2 border-line">
+              <InputGroup className="py-1">
                 <InputGroupInput
                   id="inline-end-input"
                   name="email"

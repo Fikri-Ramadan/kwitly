@@ -7,10 +7,10 @@ import { SubmitEvent, useState } from "react";
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from "../ui/button";
 import Link from "next/link";
-import Logo from "../Logo";
 import { FormState } from "@/lib/definitions";
 import { toast } from "../ui/toast";
 import { requestMagicLink } from "@/actions/auth";
+import { Ellipsis } from "lucide-react";
 
 interface LoginTabsProps {
   activeTab: 'password' | 'magiclink';
@@ -123,8 +123,10 @@ function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
   return (
     <TabsContent value="password" className={'space-y-4'}>
       <Field className="max-w-full">
-        <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Email</FieldLabel>
-        <InputGroup className="py-5 border-2 border-line">
+        <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">
+          Email
+        </FieldLabel>
+        <InputGroup className="py-1">
           <InputGroupInput
             id="inline-end-input"
             type="email"
@@ -134,7 +136,7 @@ function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
       </Field>
       <Field className="max-w-full">
         <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Password</FieldLabel>
-        <InputGroup className="py-5 border-2 border-line">
+        <InputGroup className="py-1">
           <InputGroupInput
             id="inline-end-input"
             type="password"
@@ -146,7 +148,10 @@ function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
         </FieldDescription>
       </Field>
       <Field>
-        <Button className={'w-full py-6! font-bold'}>Masuk</Button>
+        <Button className={'w-full py-6! font-bold'}>
+          Masuk
+          <Ellipsis className="size-6 animate-pulse" />
+        </Button>
         <div className="flex items-center my-2 w-full">
           <div className="flex-1 border-t-2 border-line"></div>
           <span className="mx-4 text-xs font-medium text-muted-foreground bg-transparent">
@@ -201,12 +206,16 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
     });
 
     form.reset();
-    setState(undefined);
   };
 
   return (
     <TabsContent value="magiclink">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {state?.success && (
+          <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
+            <p className="text-center">{state?.message}</p>
+          </div>
+        )}
         {state?.errors && (
           <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
             <ul className="list-disc pl-4 space-y-1">
@@ -220,7 +229,7 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
         )}
         <Field className="max-w-full">
           <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Email</FieldLabel>
-          <InputGroup className="py-5 border-2 border-line">
+          <InputGroup className="py-1">
             <InputGroupInput
               id="inline-end-input"
               name="email"
@@ -232,7 +241,9 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
           </InputGroup>
         </Field>
         <Field>
-          <Button type="submit" className={`w-full py-6! font-bold ${isPending ? 'animate-pulse' : ''}`} disabled={isPending}>Masuk</Button>
+          <Button type="submit" className={`w-full py-6! font-bold ${isPending ? 'animate-pulse' : ''}`} disabled={isPending}>
+            {isPending ? <Ellipsis className="size-6 animate-pulse" /> : 'Masuk'}
+          </Button>
           <div className="text-[12px] text-center mt-1 text-muted font-medium lg:text-sm">
             Lebih suka pakai password?{' '}
             <Button

@@ -105,7 +105,7 @@ export default function RegisterPannel({ initialValues }: RegisterPannelProps) {
             <div className="flex flex-col gap-4 lg:flex-row lg:gap-3">
               <Field className="lg:max-w-1/2 max-w-full">
                 <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Nama Lengkap</FieldLabel>
-                <InputGroup className="py-5 border-2 border-line">
+                <InputGroup className="py-1">
                   <InputGroupInput
                     id="inline-end-input"
                     name="name"
@@ -119,7 +119,7 @@ export default function RegisterPannel({ initialValues }: RegisterPannelProps) {
 
               <Field className="lg:max-w-1/2 max-w-full">
                 <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Perusahaan (opsional)</FieldLabel>
-                <InputGroup className="py-5 border-2 border-line">
+                <InputGroup className="py-1">
                   <InputGroupInput
                     id="inline-end-input"
                     name="company"
@@ -135,7 +135,7 @@ export default function RegisterPannel({ initialValues }: RegisterPannelProps) {
 
             <Field className="max-w-full">
               <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Email</FieldLabel>
-              <InputGroup className="py-5 border-2 border-line">
+              <InputGroup className="py-1">
                 <InputGroupInput
                   id="inline-end-input"
                   name="email"
@@ -149,7 +149,7 @@ export default function RegisterPannel({ initialValues }: RegisterPannelProps) {
 
             <Field className="max-w-full">
               <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Password</FieldLabel>
-              <InputGroup className="py-5 -mb-1 border-2 border-line">
+              <InputGroup className="py-1 -mb-1">
                 <InputGroupInput
                   id="inline-end-input"
                   name="password"
@@ -165,7 +165,7 @@ export default function RegisterPannel({ initialValues }: RegisterPannelProps) {
 
             <Field className="max-w-full">
               <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Konfirmasi Password</FieldLabel>
-              <InputGroup className="py-5 -mb-1 border-2 border-line">
+              <InputGroup className="py-1 -mb-1">
                 <InputGroupInput
                   id="inline-end-input"
                   name="confirmPassword"

@@ -161,5 +161,5 @@ export async function requestMagicLink(formData: FormData): Promise<FormState> {
     return { success: false, message: res.message };
   }
 
-  return { success: true, message: 'Link berhasil terkirim ke email' };
+  return { success: true, message: 'Link berhasil terkirim ke email anda' };
 }

@@ -89,7 +89,7 @@ export default function ResetPannel({ token }: { token: string; }) {
 
             <Field className="max-w-full">
               <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Password baru</FieldLabel>
-              <InputGroup className="py-5 -mb-1 border-2 border-line">
+              <InputGroup className="py-1 -mb-1">
                 <InputGroupInput
                   id="inline-end-input"
                   name="password"
@@ -104,7 +104,7 @@ export default function ResetPannel({ token }: { token: string; }) {
 
             <Field className="max-w-full">
               <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Konfirmasi password</FieldLabel>
-              <InputGroup className="py-5 -mb-1 border-2 border-line">
+              <InputGroup className="py-1 -mb-1">
                 <InputGroupInput
                   id="inline-end-input"
                   name="confirmPassword"
