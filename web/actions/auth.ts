@@ -1,8 +1,9 @@
 'use server';
 
 import { authFetch } from "@/lib/auth/auth-fetch";
+import { setSession } from "@/lib/auth/session";
 import { deleteVerifEmail, setVerifEmail } from "@/lib/auth/verifEmail";
-import { forgotPasswordSchema, FormState, resetPasswordSchema, signupFormSchema } from "@/lib/definitions";
+import { forgotPasswordSchema, FormState, resetPasswordSchema, signinFormSchema, signupFormSchema } from "@/lib/definitions";
 import z from "zod";
 
 export type ResendResult = {
@@ -13,11 +14,6 @@ export type ResendResult = {
 };
 
 const TOO_MANY = 'Terlalu banyak percobaan. Coba lagi beberapa saat lagi.';
-const str = (fd: FormData, k: string) => String(fd.get(k) ?? '');
-
-const safeNext = (v: string) => (v.startsWith('/') && !v.startsWith('//') ? v : '/dashboard');
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function signUp(formData: FormData): Promise<FormState> {
   const rawData = {
@@ -57,6 +53,45 @@ export async function signUp(formData: FormData): Promise<FormState> {
 
   await setVerifEmail({ ...rawData });
   return { success: true, message: 'Pendaftaran berhasil.' };
+}
+
+export async function signIn(formData: FormData): Promise<FormState> {
+  const rawData = {
+    email: formData.get('email') as string,
+    password: formData.get('password') as string
+  };
+
+  const validatedFields = signinFormSchema.safeParse({
+    email: rawData.email
+  });
+
+  if (!validatedFields.success) {
+    return {
+      inputs: { email: rawData.email },
+      errors: z.flattenError(validatedFields.error).fieldErrors,
+    };
+  }
+
+  const res = await authFetch<{
+    accessToken: string; refreshToken: string; expiresIn: number; refreshExpiresIn: number;
+  }>('/auth/login', {
+    email: rawData.email,
+    password: rawData.password
+  });
+
+  if (!res.ok) {
+    if (res.status === 429) return { success: false, message: TOO_MANY };
+    return { success: false, message: res.message };
+  }
+
+  await setSession({
+    accessToken: res.data.accessToken,
+    refreshToken: res.data.refreshToken,
+    expiresIn: res.data.expiresIn,
+    refreshExpiresIn: res.data.refreshExpiresIn
+  });
+
+  return { success: true, message: 'Login berhasil' };
 }
 
 export async function forgotPassword(formData: FormData): Promise<FormState> {

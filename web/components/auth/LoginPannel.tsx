@@ -9,8 +9,10 @@ import { Button } from "../ui/button";
 import Link from "next/link";
 import { FormState } from "@/lib/definitions";
 import { toast } from "../ui/toast";
-import { requestMagicLink } from "@/actions/auth";
+import { requestMagicLink, signIn } from "@/actions/auth";
 import { Ellipsis } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { safeNext } from "@/lib/utils";
 
 interface LoginTabsProps {
   activeTab: 'password' | 'magiclink';
@@ -120,52 +122,109 @@ function LoginTabs({ activeTab, setActiveTab }: LoginTabsProps) {
 }
 
 function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
+  const [state, setState] = useState<FormState>(undefined);
+  const [isPending, setIsPending] = useState<boolean>(false);
+  const router = useRouter();
+  const searhParams = useSearchParams();
+
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    setIsPending(true);
+    const toastId = toast.add({
+      title: 'Sedang masuk ke akun...',
+      description: 'Memverifikasi kredensial Anda.',
+      type: 'loading',
+    });
+
+    const result = await signIn(formData);
+    setState(result);
+    setIsPending(false);
+
+    if (!result?.success) {
+      toast.update(toastId, {
+        title: 'Login gagal',
+        description: result?.message || 'Terjadi kesalahan pada server.',
+        type: 'error',
+      });
+      return;
+    }
+
+    toast.update(toastId, {
+      title: result.message,
+      description: 'Beralih halaman...',
+      type: 'success',
+    });
+
+    return router.replace(safeNext(searhParams.get('next')));
+  };
+
   return (
-    <TabsContent value="password" className={'space-y-4'}>
-      <Field className="max-w-full">
-        <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">
-          Email
-        </FieldLabel>
-        <InputGroup className="py-1">
-          <InputGroupInput
-            id="inline-end-input"
-            type="email"
-            placeholder="nama@perusahaan.com"
-          />
-        </InputGroup>
-      </Field>
-      <Field className="max-w-full">
-        <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Password</FieldLabel>
-        <InputGroup className="py-1">
-          <InputGroupInput
-            id="inline-end-input"
-            type="password"
-            placeholder="Masukkan password"
-          />
-        </InputGroup>
-        <FieldDescription className="text-end text-primary font-semibold">
-          <Link href={'/forgot-password'} className="no-underline! opacity-80 hover:opacity-90">Lupa password?</Link>
-        </FieldDescription>
-      </Field>
-      <Field>
-        <Button className={'w-full py-6! font-bold'}>
-          Masuk
-          <Ellipsis className="size-6 animate-pulse" />
-        </Button>
-        <div className="flex items-center my-2 w-full">
-          <div className="flex-1 border-t-2 border-line"></div>
-          <span className="mx-4 text-xs font-medium text-muted-foreground bg-transparent">
-            atau
-          </span>
-          <div className="flex-1 border-t-2 border-line"></div>
-        </div>
-        <Button
-          variant={'outline'}
-          className={'w-full py-6! font-bold text-black/80'}
-          onClick={() => { setActiveTab('magiclink'); }}
-        >Kirim magic link ke email</Button>
-        <div className="text-center mt-2 text-muted font-medium">Belum punya akun? <Link href={'/sign-up'} className="text-primary font-bold opacity-80 hover:opacity-90">Daftar</Link></div>
-      </Field>
+    <TabsContent value="password">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {state?.errors && (
+          <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+            <ul className="list-disc pl-4 space-y-1">
+              {Object.values(state.errors)
+                .flat()
+                .map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+            </ul>
+          </div>
+        )}
+        <Field className="max-w-full">
+          <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">
+            Email
+          </FieldLabel>
+          <InputGroup className="py-1">
+            <InputGroupInput
+              id="inline-end-input"
+              type="email"
+              name="email"
+              placeholder="nama@perusahaan.com"
+              defaultValue={state?.inputs?.email ?? ''}
+              disabled={isPending}
+            />
+          </InputGroup>
+        </Field>
+        <Field className="max-w-full">
+          <FieldLabel htmlFor="inline-end-input" className="font-semibold -mb-1">Password</FieldLabel>
+          <InputGroup className="py-1">
+            <InputGroupInput
+              id="inline-end-input"
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              placeholder="Masukkan password"
+            />
+          </InputGroup>
+          <FieldDescription className="text-end text-primary font-semibold">
+            <Link href={'/forgot-password'} className="no-underline! opacity-80 hover:opacity-90">Lupa password?</Link>
+          </FieldDescription>
+        </Field>
+        <Field>
+          <Button type="submit" className={'w-full py-6! font-bold'} disabled={isPending}>
+            {isPending ? <Ellipsis className="size-6 animate-pulse" /> : 'Masuk'}
+          </Button>
+          <div className="flex items-center my-2 w-full">
+            <div className="flex-1 border-t-2 border-line"></div>
+            <span className="mx-4 text-xs font-medium text-muted-foreground bg-transparent">
+              atau
+            </span>
+            <div className="flex-1 border-t-2 border-line"></div>
+          </div>
+          <Button
+            variant={'outline'}
+            className={'w-full py-6! font-bold text-black/80'}
+            onClick={() => { setActiveTab('magiclink'); }}
+          >Kirim magic link ke email</Button>
+          <div className="text-center mt-2 text-muted font-medium">Belum punya akun? <Link href={'/sign-up'} className="text-primary font-bold opacity-80 hover:opacity-90">Daftar</Link></div>
+        </Field>
+      </form>
+
     </TabsContent>
   );
 }
@@ -241,7 +300,7 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
           </InputGroup>
         </Field>
         <Field>
-          <Button type="submit" className={`w-full py-6! font-bold ${isPending ? 'animate-pulse' : ''}`} disabled={isPending}>
+          <Button type="submit" className={`w-full py-6! font-bold`} disabled={isPending}>
             {isPending ? <Ellipsis className="size-6 animate-pulse" /> : 'Masuk'}
           </Button>
           <div className="text-[12px] text-center mt-1 text-muted font-medium lg:text-sm">

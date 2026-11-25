@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { verifyEmail } from '@/actions/auth';
 import { toast } from '@/components/ui/toast';
+import LoadingSpinner from '../LoadingSpinner';
 
 export default function VerifyTokenClient({ token }: { token: string; }) {
   const router = useRouter();
@@ -30,9 +31,6 @@ export default function VerifyTokenClient({ token }: { token: string; }) {
   }, [token, router]);
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-      <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-      <p className="text-sm font-medium text-slate-700">Memverifikasi email Anda...</p>
-    </div>
+    <LoadingSpinner text='Memverifikasi email Anda...' />
   );
 }

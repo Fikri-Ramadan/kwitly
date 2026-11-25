@@ -192,7 +192,8 @@ export class AuthService {
       accessToken,
       refreshToken,
       tokenType: 'Bearer' as const,
-      expiresIn: ACCESS_TOKEN_TTL_S
+      expiresIn: ACCESS_TOKEN_TTL_S,
+      refreshExpiresIn: REFRESH_TTL_MS
     };
   }
 
