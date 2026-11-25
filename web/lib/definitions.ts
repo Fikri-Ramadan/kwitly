@@ -45,6 +45,11 @@ export const signupFormSchema = z
     path: ['confirmPassword'],
   });
 
+export const signinFormSchema = z
+  .object({
+    email: z.email({ error: 'Tolong masukan email yang valid.' }).trim(),
+  });
+
 export const forgotPasswordSchema = z
   .object({
     email: z.email({ error: 'Tolong masukan email yang valid.' }).trim(),
@@ -67,3 +72,9 @@ export const resetPasswordSchema = z
     error: 'Konfirmasi password tidak cocok dengan password.',
     path: ['confirmPassword'],
   });
+
+export const NAV_LINKS = [
+  { label: "Fitur", href: "/#fitur" },
+  { label: "Cara Kerja", href: "/#cara-kerja" },
+  { label: "FAQ", href: "/#faq" },
+];
