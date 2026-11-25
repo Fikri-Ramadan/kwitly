@@ -232,6 +232,7 @@ function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
 function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
   const [state, setState] = useState<FormState>(undefined);
   const [isPending, setIsPending] = useState(false);
+  const searhParams = useSearchParams();
 
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -245,7 +246,7 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
       type: 'loading',
     });
 
-    const result = await requestMagicLink(formData);
+    const result = await requestMagicLink(formData, safeNext(searhParams.get('next')));
     setState(result);
     setIsPending(false);
 

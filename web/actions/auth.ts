@@ -1,7 +1,7 @@
 'use server';
 
 import { authFetch } from "@/lib/auth/auth-fetch";
-import { setSession } from "@/lib/auth/session";
+import { removeSession, setSession } from "@/lib/auth/session";
 import { deleteVerifEmail, setVerifEmail } from "@/lib/auth/verifEmail";
 import { forgotPasswordSchema, FormState, resetPasswordSchema, signinFormSchema, signupFormSchema } from "@/lib/definitions";
 import z from "zod";
@@ -175,7 +175,7 @@ export async function resendVerificationMail(email: string): Promise<ResendResul
   return { success: true, seconds: res.data.seconds, message: 'Link berhasil terkirim. Cek email kamu untuk verifikasi (berlaku 24 jam).' };
 }
 
-export async function requestMagicLink(formData: FormData): Promise<FormState> {
+export async function requestMagicLink(formData: FormData, next?: string): Promise<FormState> {
   const email = formData.get('email') as string;
 
   const validatedFields = forgotPasswordSchema.safeParse({ email });
@@ -187,7 +187,7 @@ export async function requestMagicLink(formData: FormData): Promise<FormState> {
     };
   }
 
-  const res = await authFetch('/auth/magic-link', {
+  const res = await authFetch(`/auth/magic-link?next=${next}`, {
     email
   });
 
@@ -196,5 +196,9 @@ export async function requestMagicLink(formData: FormData): Promise<FormState> {
     return { success: false, message: res.message };
   }
 
-  return { success: true, message: 'Link berhasil terkirim ke email anda' };
+  return { success: true, message: `Link berhasil terkirim ke email ${email}` };
+}
+
+export async function logout() {
+  await removeSession();
 }
