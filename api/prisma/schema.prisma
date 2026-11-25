@@ -95,6 +95,7 @@ model AuthToken {
   familyId  String?
   expiresAt DateTime
   usedAt    DateTime?
+  revokedAt DateTime?
   createdAt DateTime      @default(now())
 
   @@index([userId, type])

@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export class UserService {
   constructor(private prisma: PrismaService) { }
 
-  async create(email: string, password: string) {
+  async create(email: string, password: string, name: string, company?: string) {
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) throw new ConflictException('Email is already in use');
     return await this.prisma.user.create({
@@ -14,7 +14,8 @@ export class UserService {
         password,
         profile: {
           create: {
-            fullName: email.split('@')[0]
+            fullName: name,
+            ...(company && { company })
           }
         }
       },

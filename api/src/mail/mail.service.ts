@@ -1,4 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { VERIFICATION_SUBJECT, verificationEmail } from "./templates/verification.template.js";
+import { MAGIC_LINK_SUBJECT, magicLinkEmail } from "./templates/magic-link.template.js";
+import { FORGOT_PASSWORD_SUBJECT, forgotPasswordEmail } from "./templates/forgot-password.template.js";
+
 
 type Mail = { to: string; subject: string; html: string; };
 type Invoice = {
@@ -17,24 +21,24 @@ export class MailService {
   async sendVerification(to: string, link: string) {
     await this.send({
       to,
-      subject: 'verify email Kwitly',
-      html: `<p>Klik tautan berikut untuk memverifikasi akun Anda (berlaku 24 jam):</p><p><a href="${link}">Verifikasi email</a></p>`,
+      subject: VERIFICATION_SUBJECT,
+      html: verificationEmail(link),
     });
   }
 
   async sendMagicLink(to: string, link: string) {
     await this.send({
       to,
-      subject: 'Tautan login Kwitly',
-      html: `<p>Klik tautan berikut untuk masuk (berlaku 15 menit, sekali pakai):</p><p><a href="${link}">Masuk ke Kwitly</a></p><p>Abaikan email ini jika Anda tidak memintanya.</p>`
+      subject: MAGIC_LINK_SUBJECT,
+      html: magicLinkEmail(link)
     });
   }
 
   async sendForgotLink(to: string, link: string) {
     await this.send({
       to,
-      subject: 'Tautan forgot password Kwitly',
-      html: `<p>Klik tautan berikut untuk memperbaruhi password (berlaku 60 menit, sekali pakai):</p><p><a href="${link}">Masuk ke Kwitly</a></p><p>Abaikan email ini jika Anda tidak memintanya.</p>`
+      subject: FORGOT_PASSWORD_SUBJECT,
+      html: forgotPasswordEmail(link)
     });
   }
 
@@ -97,7 +101,7 @@ export class MailService {
       to,
       subject: `Invoice #${invoice.number} from ${companyOrUsername}`,
       html
-    })
+    });
   }
 
   private async send(mail: Mail) {

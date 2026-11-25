@@ -7,7 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UserModule } from './user/user.module.js';
-import { MailModule } from './auth/mail.module.js';
+import { MailModule } from './mail/mail.module.js';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth/auth.guard.js';
 import { ProfileModule } from './profile/profile.module.js';

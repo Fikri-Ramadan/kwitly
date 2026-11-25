@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, Query } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { EmailDto, ForgotPasswordDto, LoginDto, RegisterDto, SendMailDto, TokenDto, TokenResponseDto } from './dto/auth.dto.js';
 import { Public } from '../common/decorator/public.decorator.js';
@@ -7,6 +7,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 const MIN = 60;
 const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
 
 @ApiTags('Authentication')
 @Public()
@@ -26,8 +27,8 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Registration successful; please check your email.' })
   @ApiResponse({ status: 409, description: 'The email is already registered.' })
   async register(@Body() registerDto: RegisterDto) {
-    await this.authService.register(registerDto.email, registerDto.password);
-    return { message: 'Registration successfully. Check email for verify account.' };
+    await this.authService.register({ ...registerDto });
+    return { message: 'Registration successfully.' };
   }
 
   @RateLimit({ scope: 'verify-email', ip: { limit: 20, windowSeconds: 15 * MIN } })
@@ -48,8 +49,11 @@ export class AuthController {
   @Post('magic-link')
   @ApiOperation({ summary: 'Request Magic Link', description: 'Send an instant login link to the email—no password required.' })
   @ApiResponse({ status: 200, description: 'The magic link has been sent successfully.' })
-  async requestMagicLink(@Body() { email }: EmailDto) {
-    await this.authService.requestMagicLink(email);
+  async requestMagicLink(
+    @Query() { next }: { next: string; },
+    @Body() { email }: EmailDto
+  ) {
+    await this.authService.requestMagicLink(email, next);
     return { message: 'The link has been sent successfully. Please check your email.' };
   }
 
@@ -104,6 +108,7 @@ export class AuthController {
     return { message: 'Password successfully changed. Please log in.' };
   }
 
+  @RateLimit({ scope: 'refresh', ip: { limit: 240, windowSeconds: 15 * MIN } })
   @Post('refresh')
   @ApiOperation({ summary: 'Refresh Token', description: 'Obtaining a new access token using a refresh token.' })
   @ApiResponse({ status: 200, type: TokenResponseDto })
@@ -113,13 +118,22 @@ export class AuthController {
 
   @RateLimit({
     scope: 'send-email',
-    ip: { limit: 1, windowSeconds: MIN },
-    email: { limit: 1, windowSeconds: MIN },
+    ip: [
+      { limit: 1, windowSeconds: MIN },
+      { limit: 50, windowSeconds: DAY },
+    ],
+    email: [
+      { limit: 1, windowSeconds: MIN },
+      { limit: 15, windowSeconds: DAY },
+    ],
   })
   @Post('send-mail')
   @ApiOperation({ summary: 'Resend Email', description: 'Resend the verification email, magic link or forgot password.' })
   async sendMail(@Body() { type, email }: SendMailDto) {
-    await this.authService.resendMail(type, email);
-    return { message: 'The link has been sent successfully. Please check your email.' };
+    const result = await this.authService.resendMail(type, email);
+    if (result?.alreadyVerified) {
+      return { message: 'Email already verified.', alreadyVerified: result.alreadyVerified };
+    }
+    return { message: 'The link has been sent successfully. Please check your email.', alreadyVerified: result?.alreadyVerified, seconds: MIN };
   }
 }

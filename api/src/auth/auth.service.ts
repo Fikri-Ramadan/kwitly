@@ -1,11 +1,13 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service.js';
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import { MailService } from './mail.service.js';
+import { MailService } from '../mail/mail.service.js';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { RegisterDto } from './dto/auth.dto.js';
 
 export const OneTimeTokenValues = ['EMAIL_VERIFY', 'MAGIC_LINK', 'FORGOT_PASS'] as const;
 export type OneTimeType = (typeof OneTimeTokenValues)[number];
@@ -17,9 +19,12 @@ const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000; // 15 Minutes
 const FORGOT_PASS_TTL_MS = 60 * 60 * 1000; // 60 Minutes
 export const ACCESS_TOKEN_TTL_S = 15 * 60; // 15 Minutes
+const REFRESH_GRACE_MS = 10000; // 10 Seconds
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private config: ConfigService,
     private userService: UserService,
@@ -28,18 +33,11 @@ export class AuthService {
     private mailService: MailService
   ) { }
 
-  async validateUser(email: string, pass: string) {
-    const user = await this.userService.findByEmail(email);
-    if (pass !== user.password) throw new HttpException('Incorrect password', HttpStatus.BAD_REQUEST);
-    const { password, ...result } = user;
-    return result;
-  }
-
-  async requestMagicLink(email: string) {
+  async requestMagicLink(email: string, next?: string) {
     const user = await this.userService.upsert(email);
     await this.invalidateTokens(user.id, 'MAGIC_LINK');
     const token = await this.createToken(user.id, 'MAGIC_LINK', MAGIC_LINK_TTL_MS);
-    await this.mailService.sendMagicLink(user.email, this.webLink('/verify-magic-link', token));
+    await this.mailService.sendMagicLink(user.email, this.webLink('/api/verify-magic-link', { next, token }));
   }
 
   async verifyMagicLink(token: string) {
@@ -51,34 +49,36 @@ export class AuthService {
     return await this.issueSession(user);
   }
 
-  async register(email: string, password: string) {
-    const record = await this.userService.create(
-      email,
-      await bcrypt.hash(password, BCRYPT_ROUNDS),
+  async register(data: RegisterDto) {
+    await this.userService.create(
+      data.email,
+      await bcrypt.hash(data.password, BCRYPT_ROUNDS),
+      data.name, data.company
     );
-    const token = await this.createToken(record.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
-    await this.mailService.sendVerification(record.email, this.webLink('/verify-email', token));
   }
 
   async resendMail(type: OneTimeType, email: string) {
     const user = await this.userService.findByEmail(email);
     switch (type) {
       case 'EMAIL_VERIFY': {
+        if (user.emailVerified) {
+          return { alreadyVerified: true, };
+        }
         await this.invalidateTokens(user.id, 'EMAIL_VERIFY');
         const token = await this.createToken(user.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
-        await this.mailService.sendVerification(email, this.webLink('/verify-email', token));
+        await this.mailService.sendVerification(email, this.webLink('/verify-email', { token }));
         break;
       }
       case 'MAGIC_LINK': {
         await this.invalidateTokens(user.id, 'MAGIC_LINK');
         const token = await this.createToken(user.id, 'MAGIC_LINK', MAGIC_LINK_TTL_MS);
-        await this.mailService.sendMagicLink(user.email, this.webLink('/verify-magic-link', token));
+        await this.mailService.sendMagicLink(user.email, this.webLink('/verify-magic-link', { token }));
         break;
       }
       case 'FORGOT_PASS': {
         await this.invalidateTokens(user.id, 'FORGOT_PASS');
         const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
-        await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', token));
+        await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', { token }));
         break;
       }
     }
@@ -102,25 +102,42 @@ export class AuthService {
 
   async refresh(raw: string) {
     const invalid = new UnauthorizedException('The session has ended. Please log in again.');
+    const now = new Date();
 
     const record = await this.prisma.authToken.findUnique({
       where: { tokenHash: this.sha256(raw) },
       include: { user: true }
     });
 
-    if (!record || record.type !== 'REFRESH' || record.expiresAt < new Date())
+    if (!record || record.type !== 'REFRESH' || record.expiresAt < now || record.revokedAt)
       throw invalid;
 
-    if (record.usedAt) {
+    let usedAt = record.usedAt;
+
+    if (!usedAt) {
+      const { count } = await this.prisma.authToken.updateMany({
+        where: { id: record.id, usedAt: null, revokedAt: null },
+        data: { usedAt: now }
+      });
+
+      if (count === 1)
+        return await this.issueSession(record.user, record.familyId ?? undefined);
+
+      const latest = await this.prisma.authToken.findUnique({
+        where: { id: record.id },
+        select: { usedAt: true, revokedAt: true },
+      });
+
+      if (!latest || latest.revokedAt)
+        throw invalid;
+
+      usedAt = latest.usedAt;
+    }
+
+    if (!usedAt || now.getTime() - usedAt.getTime() > REFRESH_GRACE_MS) {
       if (record.familyId) await this.revokeFamily(record.familyId);
       throw invalid;
     }
-
-    const { count } = await this.prisma.authToken.updateMany({
-      where: { id: record.id, usedAt: null },
-      data: { usedAt: new Date() }
-    });
-    if (count !== 1) throw invalid;
 
     return await this.issueSession(record.user, record.familyId ?? undefined);
   }
@@ -130,14 +147,14 @@ export class AuthService {
       where: { tokenHash: this.sha256(raw) }
     });
     if (record?.type === 'REFRESH' && record.familyId)
-      this.revokeFamily(record.familyId);
+      await this.revokeFamily(record.familyId);
   }
 
   async requestResetPassword(email: string) {
     const user = await this.userService.findByEmail(email);
     await this.invalidateTokens(user.id, 'FORGOT_PASS');
     const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
-    await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', token));
+    await this.mailService.sendForgotLink(user.email, this.webLink('/reset-password', { token }));
   }
 
   async resetPassword(token: string, password: string) {
@@ -154,9 +171,12 @@ export class AuthService {
           type: { in: ['FORGOT_PASS', 'REFRESH', 'MAGIC_LINK'] }
         },
         data: { usedAt: new Date() }
-      })
+      }),
+      this.prisma.authToken.updateMany({
+        where: { userId, type: 'REFRESH', revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
     ]);
-    await this.userService.updatePassword(userId, hashedPassword);
   }
 
   private async issueSession(
@@ -172,7 +192,8 @@ export class AuthService {
       accessToken,
       refreshToken,
       tokenType: 'Bearer' as const,
-      expiresIn: ACCESS_TOKEN_TTL_S
+      expiresIn: ACCESS_TOKEN_TTL_S,
+      refreshExpiresIn: REFRESH_TTL_MS
     };
   }
 
@@ -219,8 +240,8 @@ export class AuthService {
 
   private async revokeFamily(familyId: string) {
     await this.prisma.authToken.updateMany({
-      where: { familyId, usedAt: null },
-      data: { usedAt: new Date() }
+      where: { familyId, revokedAt: null },
+      data: { revokedAt: new Date() }
     });
   }
 
@@ -228,8 +249,21 @@ export class AuthService {
     return createHash('sha256').update(value).digest('hex');
   }
 
-  private webLink(path: string, token: string) {
-    const base = this.config.getOrThrow<string>('WEB_URL');
-    return `${base}${path}?token=${encodeURIComponent(token)}`;
+  private webLink(path: string, params: Record<string, string | undefined> = {}) {
+    const url = new URL(path, this.config.getOrThrow<string>('WEB_URL'));
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== '') url.searchParams.set(key, value);
+    }
+    return url.toString();
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, {
+    timeZone: 'Asia/Jakarta'
+  })
+  async cleanUpToken() {
+    const { count } = await this.prisma.authToken.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+    this.logger.log(`Total refresh tokens removed: ${count}`);
   }
 }

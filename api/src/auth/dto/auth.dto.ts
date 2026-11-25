@@ -1,16 +1,25 @@
-import { IsEmail, IsIn, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { OneTimeTokenValues } from '../auth.service.js';
 import type { OneTimeType } from '../auth.service.js';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RegisterDto {
+  @ApiProperty({ example: 'budi', maxLength: 254 })
+  @IsString()
+  name: string;
+
+  @ApiPropertyOptional({ example: 'PT. Jaya Selalu', maxLength: 254 })
+  @IsOptional()
+  @IsString()
+  company?: string;
+  
   @ApiProperty({ example: 'budi@gmail.com', format: 'email', maxLength: 254 })
   @IsEmail()
   email: string;
 
   @ApiProperty({ example: 'budi12345', minLength: 7, format: 'password', maxLength: 128 })
   @IsString()
-  @MinLength(7)
+  @MinLength(8)
   @MaxLength(128)
   password: string;
 }
