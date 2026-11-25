@@ -63,13 +63,7 @@ export function emailLayout({
           <!-- Header -->
           <tr>
             <td class="px" bgcolor="#0B1424" style="background:#0B1424;border-radius:16px 16px 0 0;padding:24px 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td width="32" height="32" align="center" valign="middle" bgcolor="#2DD4BF"
-                      style="width:32px;height:32px;border-radius:8px;background:#2DD4BF;color:#0B1424;font-family:${FONT};font-size:18px;font-weight:700;line-height:32px;">K</td>
-                  <td style="padding-left:10px;font-family:${FONT};font-size:22px;font-weight:700;letter-spacing:-0.01em;color:#FFFFFF;">Kwitly</td>
-                </tr>
-              </table>
+              <img src="https://kwitly.vercel.app/kwitly-logo-dark.svg" alt="logo" width=120 height=50 />
             </td>
           </tr>
 
