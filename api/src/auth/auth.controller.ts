@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, Query } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { EmailDto, ForgotPasswordDto, LoginDto, RegisterDto, SendMailDto, TokenDto, TokenResponseDto } from './dto/auth.dto.js';
 import { Public } from '../common/decorator/public.decorator.js';
@@ -49,8 +49,11 @@ export class AuthController {
   @Post('magic-link')
   @ApiOperation({ summary: 'Request Magic Link', description: 'Send an instant login link to the email—no password required.' })
   @ApiResponse({ status: 200, description: 'The magic link has been sent successfully.' })
-  async requestMagicLink(@Body() { email }: EmailDto) {
-    await this.authService.requestMagicLink(email);
+  async requestMagicLink(
+    @Query() { next }: { next: string; },
+    @Body() { email }: EmailDto
+  ) {
+    await this.authService.requestMagicLink(email, next);
     return { message: 'The link has been sent successfully. Please check your email.' };
   }
 

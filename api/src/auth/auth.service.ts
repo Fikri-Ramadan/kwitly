@@ -33,11 +33,11 @@ export class AuthService {
     private mailService: MailService
   ) { }
 
-  async requestMagicLink(email: string) {
+  async requestMagicLink(email: string, next?: string) {
     const user = await this.userService.upsert(email);
     await this.invalidateTokens(user.id, 'MAGIC_LINK');
     const token = await this.createToken(user.id, 'MAGIC_LINK', MAGIC_LINK_TTL_MS);
-    await this.mailService.sendMagicLink(user.email, this.webLink('/verify-magic-link', token));
+    await this.mailService.sendMagicLink(user.email, this.webLink('/api/verify-magic-link', { next, token }));
   }
 
   async verifyMagicLink(token: string) {
@@ -66,19 +66,19 @@ export class AuthService {
         }
         await this.invalidateTokens(user.id, 'EMAIL_VERIFY');
         const token = await this.createToken(user.id, 'EMAIL_VERIFY', EMAIL_VERIFY_TTL_MS);
-        await this.mailService.sendVerification(email, this.webLink('/verify-email', token));
+        await this.mailService.sendVerification(email, this.webLink('/verify-email', { token }));
         break;
       }
       case 'MAGIC_LINK': {
         await this.invalidateTokens(user.id, 'MAGIC_LINK');
         const token = await this.createToken(user.id, 'MAGIC_LINK', MAGIC_LINK_TTL_MS);
-        await this.mailService.sendMagicLink(user.email, this.webLink('/verify-magic-link', token));
+        await this.mailService.sendMagicLink(user.email, this.webLink('/verify-magic-link', { token }));
         break;
       }
       case 'FORGOT_PASS': {
         await this.invalidateTokens(user.id, 'FORGOT_PASS');
         const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
-        await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', token));
+        await this.mailService.sendForgotLink(user.email, this.webLink('/forgot-password', { token }));
         break;
       }
     }
@@ -154,7 +154,7 @@ export class AuthService {
     const user = await this.userService.findByEmail(email);
     await this.invalidateTokens(user.id, 'FORGOT_PASS');
     const token = await this.createToken(user.id, 'FORGOT_PASS', FORGOT_PASS_TTL_MS);
-    await this.mailService.sendForgotLink(user.email, this.webLink('/reset-password', token));
+    await this.mailService.sendForgotLink(user.email, this.webLink('/reset-password', { token }));
   }
 
   async resetPassword(token: string, password: string) {
@@ -249,9 +249,12 @@ export class AuthService {
     return createHash('sha256').update(value).digest('hex');
   }
 
-  private webLink(path: string, token: string) {
-    const base = this.config.getOrThrow<string>('WEB_URL');
-    return `${base}${path}?token=${encodeURIComponent(token)}`;
+  private webLink(path: string, params: Record<string, string | undefined> = {}) {
+    const url = new URL(path, this.config.getOrThrow<string>('WEB_URL'));
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== '') url.searchParams.set(key, value);
+    }
+    return url.toString();
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM, {
