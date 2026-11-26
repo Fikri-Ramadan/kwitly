@@ -153,6 +153,8 @@ export async function verifyEmail(token: string): Promise<FormState> {
     return { success: false, message: res.message };
   }
 
+  await deleteVerifEmail();
+
   return { success: true, message: 'Verifikasi email berhasil' };
 }
 

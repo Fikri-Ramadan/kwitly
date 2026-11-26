@@ -238,7 +238,7 @@ function TabsPassword({ tab, error, next }: LoginPannelProps) {
             className={'w-full py-6! font-bold text-black/80'}
             onClick={() => {
               const params = new URLSearchParams();
-              if (tab) params.set('tab', tab);
+              params.set('tab', 'magiclink');
               if (error) params.set('error', error.toString());
               if (next) params.set('next', next);
 
@@ -345,7 +345,7 @@ function TabsMagicLink({ tab, error, next }: LoginPannelProps) {
               className='text-[12px] text-primary font-bold px-0 hover:bg-transparent hover:text-primary hover:opacity-90 lg:text-sm'
               onClick={() => {
                 const params = new URLSearchParams();
-                if (tab) params.set('tab', tab);
+                params.set('tab', 'password');
                 if (error) params.set('error', error.toString());
                 if (next) params.set('next', next);
 
