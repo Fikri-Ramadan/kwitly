@@ -78,3 +78,15 @@ export const NAV_LINKS = [
   { label: "Cara Kerja", href: "/#cara-kerja" },
   { label: "FAQ", href: "/#faq" },
 ];
+
+export enum TokenError {
+  INVALID_OR_EXPIRED = 'invalid_or_expired',
+  SERVER_ERROR = 'server_error',
+  MISSING_TOKEN = 'missing_token'
+}
+
+export const tokenErrorMessage = {
+  invalid_or_expired: 'Tautan masuk tidak valid atau sudah kedaluwarsa. Silakan kirim ulang tautan baru.',
+  server_error: 'Terjadi gangguan pada server saat memverifikasi tautan. Silakan coba beberapa saat lagi.',
+  missing_token: 'Tautan verifikasi tidak lengkap. Pastikan Anda membuka tautan langsung dari email Anda.',
+} as const;

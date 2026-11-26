@@ -1,5 +1,6 @@
 import { authFetch } from "@/lib/auth/auth-fetch";
 import { setSession } from "@/lib/auth/session";
+import { TokenError } from "@/lib/definitions";
 import { safeNext } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
   const next = safeNext(searchParams.get('next'));
 
   if (!token) {
-    return NextResponse.redirect(new URL('/sign-in?tab=magic-link&error=missing_token', request.url));
+    return NextResponse.redirect(new URL(`/sign-in?tab=magiclink&error=${TokenError.MISSING_TOKEN}`, request.url));
   }
 
   try {
@@ -17,8 +18,11 @@ export async function GET(request: NextRequest) {
       accessToken: string; refreshToken: string; expiresIn: number; refreshExpiresIn: number;
     }>(`/auth/verify-magic-link`, { token });
 
+    if (!res.ok && res.status === 0) {
+      return NextResponse.redirect(new URL(`/sign-in?tab=magiclink&error=${TokenError.SERVER_ERROR}`, request.url));
+    }
     if (!res.ok) {
-      return NextResponse.redirect(new URL('/sign-in?error=invalid_or_expired', request.url));
+      return NextResponse.redirect(new URL(`/sign-in?tab=magiclink&error=${TokenError.INVALID_OR_EXPIRED}`, request.url));
     }
 
     const { accessToken, refreshToken, expiresIn, refreshExpiresIn } = res.data;
@@ -27,6 +31,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(new URL(next, request.url));
   } catch (error) {
-    return NextResponse.redirect(new URL('/login?error=server_error', request.url));
+    return NextResponse.redirect(new URL(`/sign-in?tab=magiclink&error=${TokenError.SERVER_ERROR}`, request.url));
   }
 }

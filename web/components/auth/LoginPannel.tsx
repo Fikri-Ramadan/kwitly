@@ -7,21 +7,18 @@ import { SubmitEvent, useState } from "react";
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from "../ui/button";
 import Link from "next/link";
-import { FormState } from "@/lib/definitions";
+import { FormState, tokenErrorMessage } from "@/lib/definitions";
 import { toast } from "../ui/toast";
 import { requestMagicLink, signIn } from "@/actions/auth";
 import { Ellipsis } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { safeNext } from "@/lib/utils";
+import { LoginSearchType, LoginTabType } from "@/app/(auth)/sign-in/page";
 
-interface LoginTabsProps {
-  activeTab: 'password' | 'magiclink';
-  setActiveTab: (tab: 'password' | 'magiclink') => void; //  Aman & Pasti terdefinisi
-}
 
-export default function LoginPannel() {
-  const [activeTab, setActiveTab] = useState<'password' | 'magiclink'>("password");
+interface LoginPannelProps extends LoginSearchType { };
 
+export default function LoginPannel({ tab = 'password', error, next }: LoginPannelProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -33,7 +30,7 @@ export default function LoginPannel() {
           className="w-full max-w-[392px] tracking-tight space-y-1 overflow-hidden min-h-[84px] relative mb-2.5 px-4 lg:px-0"
         >
           <motion.div
-            key={activeTab}
+            key={tab}
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
@@ -41,32 +38,52 @@ export default function LoginPannel() {
             className="space-y-1 text-center lg:text-start"
           >
             <h1 className="text-[28px] font-bold">
-              {activeTab === 'password' ? 'Masuk ke Kwitly' : 'Masuk tanpa password'}
+              {tab === 'password' ? 'Masuk ke Kwitly' : 'Masuk dengan email'}
             </h1>
             <p className="text-[15px] text-muted leading-snug">
-              {activeTab === 'password'
+              {tab === 'password'
                 ? 'Selamat Datang Kembali. Kelola invoice anda.'
-                : 'Kami kirim tautan sekali pakai ke email Anda. Tautan berlaku 15 menit.'}
+                : 'Tanpa password dan tanpa registrasi manual. Cukup klik tautan sekali pakai yang kami kirim ke email Anda (berlaku 15 menit).'}
             </p>
           </motion.div>
         </div>
       </AnimatePresence>
 
-      <LoginTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+      <LoginTabs
+        tab={tab}
+        error={error}
+        next={next}
+      />
     </motion.div>
   );
 }
 
-function LoginTabs({ activeTab, setActiveTab }: LoginTabsProps) {
+function LoginTabs({ tab, error, next }: LoginPannelProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleChange = (value: LoginTabType) => {
+    const params = new URLSearchParams();
+    params.set('tab', value);
+    if (error) params.set('error', error.toString());
+    if (next) params.set('next', next);
+
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-[392px] px-4 lg:px-0">
+    <Tabs
+      className="w-full max-w-[392px] px-4 lg:px-0"
+      value={tab}
+      onValueChange={handleChange}
+    >
       <TabsList className={'w-full py-6 relative'}>
         <TabsTrigger
           className={'py-5.5 font-bold w-full relative z-10 transition-colors data-[state=active]:text-black text-muted-foreground hover:cursor-pointer'}
           value="password"
         >
           Password
-          {activeTab === "password" && (
+          {tab === "password" && (
             <motion.div
               layoutId="active-pill"
               className="absolute inset-0 bg-white rounded-lg shadow-sm -z-10 border"
@@ -79,7 +96,7 @@ function LoginTabs({ activeTab, setActiveTab }: LoginTabsProps) {
           value="magiclink"
         >
           Magic Link
-          {activeTab === "magiclink" && (
+          {tab === "magiclink" && (
             <motion.div
               layoutId="active-pill"
               className="absolute inset-0 bg-white rounded-lg shadow-sm -z-10 border"
@@ -90,7 +107,7 @@ function LoginTabs({ activeTab, setActiveTab }: LoginTabsProps) {
       </TabsList>
       <div className="relative mt-2 overflow-hidden min-h-[160px]">
         <AnimatePresence mode="wait">
-          {activeTab === "password" && (
+          {tab === "password" && (
             <TabsContent value="password" key="password-content">
               <motion.div
                 initial={{ opacity: 0, x: -12 }}
@@ -98,12 +115,12 @@ function LoginTabs({ activeTab, setActiveTab }: LoginTabsProps) {
                 exit={{ opacity: 0, x: 12 }}
                 transition={{ duration: 0.18, ease: "easeInOut" }}
               >
-                <TabsPassword setActiveTab={setActiveTab} />
+                <TabsPassword tab={tab} next={next} />
               </motion.div>
             </TabsContent>
           )}
 
-          {activeTab === "magiclink" && (
+          {tab === "magiclink" && (
             <TabsContent value="magiclink" key="magiclink-content">
               <motion.div
                 initial={{ opacity: 0, x: 12 }}
@@ -111,7 +128,7 @@ function LoginTabs({ activeTab, setActiveTab }: LoginTabsProps) {
                 exit={{ opacity: 0, x: -12 }}
                 transition={{ duration: 0.18, ease: "easeInOut" }}
               >
-                <TabsMagicLink setActiveTab={setActiveTab} />
+                <TabsMagicLink tab={tab} error={error} next={next} />
               </motion.div>
             </TabsContent>
           )}
@@ -121,11 +138,11 @@ function LoginTabs({ activeTab, setActiveTab }: LoginTabsProps) {
   );
 }
 
-function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
+function TabsPassword({ tab, error, next }: LoginPannelProps) {
   const [state, setState] = useState<FormState>(undefined);
   const [isPending, setIsPending] = useState<boolean>(false);
   const router = useRouter();
-  const searhParams = useSearchParams();
+  const pathname = usePathname();
 
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -158,7 +175,7 @@ function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
       type: 'success',
     });
 
-    return router.replace(safeNext(searhParams.get('next')));
+    return router.replace(safeNext(next));
   };
 
   return (
@@ -219,7 +236,14 @@ function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
           <Button
             variant={'outline'}
             className={'w-full py-6! font-bold text-black/80'}
-            onClick={() => { setActiveTab('magiclink'); }}
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (tab) params.set('tab', tab);
+              if (error) params.set('error', error.toString());
+              if (next) params.set('next', next);
+
+              router.push(`${pathname}?${params.toString()}`, { scroll: false });
+            }}
           >Kirim magic link ke email</Button>
           <div className="text-center mt-2 text-muted font-medium">Belum punya akun? <Link href={'/sign-up'} className="text-primary font-bold opacity-80 hover:opacity-90">Daftar</Link></div>
         </Field>
@@ -229,10 +253,11 @@ function TabsPassword({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
   );
 }
 
-function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
+function TabsMagicLink({ tab, error, next }: LoginPannelProps) {
   const [state, setState] = useState<FormState>(undefined);
   const [isPending, setIsPending] = useState(false);
-  const searhParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -246,7 +271,7 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
       type: 'loading',
     });
 
-    const result = await requestMagicLink(formData, safeNext(searhParams.get('next')));
+    const result = await requestMagicLink(formData, safeNext(next));
     setState(result);
     setIsPending(false);
 
@@ -265,6 +290,10 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
       type: 'success',
     });
 
+    const params = new URLSearchParams();
+    if (tab) params.set('tab', tab);
+    if (next) params.set('next', next);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
     form.reset();
   };
 
@@ -285,6 +314,11 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
                   <li key={index}>{error}</li>
                 ))}
             </ul>
+          </div>
+        )}
+        {!!error && tokenErrorMessage[error] && (
+          <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-center">{tokenErrorMessage[error]}</p>
           </div>
         )}
         <Field className="max-w-full">
@@ -309,7 +343,14 @@ function TabsMagicLink({ setActiveTab }: Omit<LoginTabsProps, 'activeTab'>) {
             <Button
               variant={'ghost'}
               className='text-[12px] text-primary font-bold px-0 hover:bg-transparent hover:text-primary hover:opacity-90 lg:text-sm'
-              onClick={() => { setActiveTab('password'); }}
+              onClick={() => {
+                const params = new URLSearchParams();
+                if (tab) params.set('tab', tab);
+                if (error) params.set('error', error.toString());
+                if (next) params.set('next', next);
+
+                router.push(`${pathname}?${params.toString()}`, { scroll: false });
+              }}
             >
               Masuk dengan password
             </Button>
