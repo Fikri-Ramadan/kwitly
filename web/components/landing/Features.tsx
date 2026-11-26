@@ -42,7 +42,7 @@ const FEATURES: Feature[] = [
     icon: BarChart3,
     title: "Laporan Real-time",
     description:
-      "PantauOmzet, pembayaran yang belum lunas, dan-aging invoice dari satu dasbor yang mudah dibaca.",
+      "Pantau Omzet, pembayaran yang belum lunas, dan aging invoice dari satu dasbor yang mudah dibaca.",
     points: ["Ringkasan omzet", "Status pembayaran", "Filter periode"],
   },
   {

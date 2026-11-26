@@ -1,7 +1,9 @@
 import { ChartColumnBig, FilePen, Send } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "../ui/card";
-import { Button } from "../ui/button";
+import { Button, buttonVariants } from "../ui/button";
+import Link from "next/link";
+import { cn } from "cn";
 
 interface Step {
   name: string;
@@ -70,9 +72,12 @@ export default function HowItWork() {
         </div>
 
         <div className="mx-auto mt-8 max-w-2xl text-center space-y-2">
-          <Button className={'px-4 py-5'}>
+          <Link href={'/sign-up'} className={cn(
+            buttonVariants({ variant: 'default', size: 'lg' }),
+            'px-4 py-5'
+          )}>
             Mulai Gratis Sekarang
-          </Button>
+          </Link>
           <p className="text-center text-sm text-muted">
             100% Gratis. Tanpa kartu kredit.
           </p>
