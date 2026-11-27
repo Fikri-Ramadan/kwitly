@@ -3,7 +3,8 @@
 import { authFetch } from "@/lib/auth/auth-fetch";
 import { removeSession, setSession } from "@/lib/auth/session";
 import { deleteVerifEmail, setVerifEmail } from "@/lib/auth/verifEmail";
-import { forgotPasswordSchema, FormState, resetPasswordSchema, signinFormSchema, signupFormSchema } from "@/lib/definitions";
+import { FormState } from "@/lib/definitions";
+import { forgotPasswordSchema, resetPasswordSchema, signinFormSchema, signupFormSchema } from "@/lib/utils";
 import z from "zod";
 
 export type ResendResult = {

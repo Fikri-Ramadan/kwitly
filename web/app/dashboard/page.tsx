@@ -1,5 +1,10 @@
+import LogoutButton from "@/components/dashboard/LogoutButton";
+
 export default function DashboardPage() {
   return (
-    <div className="text-2xl text-primary font-bold">Dashboard</div>
+    <div className="text-2xl text-primary font-bold">
+      Dashboard
+      <LogoutButton />
+    </div>
   )
 }

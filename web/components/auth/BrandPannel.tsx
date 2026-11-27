@@ -66,7 +66,7 @@ export default function BrandPannel() {
     >
       <motion.div variants={itemVariants}>
         <Link href={'/'} className="inline-block w-fit">
-          <Logo width={100} height={36} type="DARK" />
+          <Logo width={100} height={36} type="dark" />
         </Link>
       </motion.div>
       <motion.div variants={itemVariants} className="space-y-3 my-auto">

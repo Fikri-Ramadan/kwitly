@@ -23,7 +23,7 @@ export async function removeSession() {
   jar.delete(RT);
 }
 
-export async function getSession() {
+export const getSession = cache(async () => {
   const jar = await cookies();
   const at = (await decryptCookie(jar.get(AT)?.value))?.accessToken;
   const rt = (await decryptCookie(jar.get(RT)?.value))?.refreshToken;
@@ -37,9 +37,10 @@ export async function getSession() {
   });
 
   if (res.status === 401 && rt) return { isAuth: true };
+
   const data = await res.json();
-  return { isAuth: true, userId: data.userId, fullName: data.fullName };
-};
+  return { userId: data.userId, fullName: data.fullName, company: data.company };
+});
 
 export const hasSession = cache(async () => {
   const jar = await cookies();

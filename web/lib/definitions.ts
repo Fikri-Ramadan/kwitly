@@ -1,3 +1,4 @@
+import { Box, LayoutDashboard, RefreshCw, SquareText, UsersRound } from 'lucide-react';
 import * as z from 'zod';
 
 export type FormState =
@@ -22,61 +23,18 @@ export type FormState =
   }
   | undefined;
 
-export const signupFormSchema = z
-  .object({
-    name: z
-      .string()
-      .min(2, { error: 'Nama setidaknya terdiri 2 panjang karakter.' })
-      .trim(),
-    email: z.email({ error: 'Tolong masukan email yang valid.' }).trim(),
-    password: z
-      .string()
-      .min(8, { error: 'Password minimal terdiri dari 8 karakter' })
-      .regex(/[a-zA-Z]/, { error: 'Password memuat setidaknya satu huruf.' })
-      .regex(/[0-9]/, { error: 'Password memuat setidaknya satu angka.' })
-      .trim(),
-    confirmPassword: z
-      .string()
-      .min(1, { error: 'Konfirmasi password wajib diisi.' })
-      .trim(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    error: 'Konfirmasi password tidak cocok dengan password.',
-    path: ['confirmPassword'],
-  });
-
-export const signinFormSchema = z
-  .object({
-    email: z.email({ error: 'Tolong masukan email yang valid.' }).trim(),
-  });
-
-export const forgotPasswordSchema = z
-  .object({
-    email: z.email({ error: 'Tolong masukan email yang valid.' }).trim(),
-  });
-
-export const resetPasswordSchema = z
-  .object({
-    password: z
-      .string()
-      .min(8, { error: 'Password minimal terdiri dari 8 karakter' })
-      .regex(/[a-zA-Z]/, { error: 'Password memuat setidaknya satu huruf.' })
-      .regex(/[0-9]/, { error: 'Password memuat setidaknya satu angka.' })
-      .trim(),
-    confirmPassword: z
-      .string()
-      .min(1, { error: 'Konfirmasi password wajib diisi.' })
-      .trim(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    error: 'Konfirmasi password tidak cocok dengan password.',
-    path: ['confirmPassword'],
-  });
-
 export const NAV_LINKS = [
-  { label: "Fitur", href: "/#fitur" },
-  { label: "Cara Kerja", href: "/#cara-kerja" },
-  { label: "FAQ", href: "/#faq" },
+  { label: 'Fitur', href: '/#fitur' },
+  { label: 'Cara Kerja', href: '/#cara-kerja' },
+  { label: 'FAQ', href: '/#faq' },
+];
+
+export const SIDE_LINKS = [
+  { label: 'Dashboard', href: '/dashboard', Icon: LayoutDashboard },
+  { label: 'Invoice', href: '/dashboard/invoices', Icon: SquareText },
+  { label: 'Klien', href: '/dashboard/clients', Icon: UsersRound },
+  { label: 'Produk & Kategori', href: '/dashboard/products', Icon: Box },
+  { label: 'Recurring', href: '/dashboard/recurring', Icon: RefreshCw },
 ];
 
 export enum TokenError {
@@ -90,3 +48,14 @@ export const tokenErrorMessage = {
   server_error: 'Terjadi gangguan pada server saat memverifikasi tautan. Silakan coba beberapa saat lagi.',
   missing_token: 'Tautan verifikasi tidak lengkap. Pastikan Anda membuka tautan langsung dari email Anda.',
 } as const;
+
+export const AVATAR_COLOR_PALETTE = [
+  { bg: 'bg-teal-100', text: 'text-teal-800' },
+  { bg: 'bg-emerald-100', text: 'text-emerald-800' },
+  { bg: 'bg-sky-100', text: 'text-sky-800' },
+  { bg: 'bg-indigo-100', text: 'text-indigo-800' },
+  { bg: 'bg-violet-100', text: 'text-violet-800' },
+  { bg: 'bg-amber-100', text: 'text-amber-800' },
+  { bg: 'bg-rose-100', text: 'text-rose-800' },
+  { bg: 'bg-cyan-100', text: 'text-cyan-800' },
+] as const;
